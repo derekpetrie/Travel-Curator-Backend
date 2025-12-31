@@ -1,10 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput, Modal, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, MapPin, X, Trash2 } from 'lucide-react-native';
 import { colors, spacing, radius } from '../../lib/colors';
 import { collectionsApi, Collection } from '../../lib/api';
+
+function parseGradient(gradient: string | null | undefined): [string, string] {
+  if (!gradient) return [colors.primary, colors.primaryLight];
+  const parts = gradient.split(',').map(s => s.trim());
+  return [parts[0] || colors.primary, parts[1] || colors.primaryLight];
+}
 
 export default function CollectionsScreen() {
   const router = useRouter();
@@ -43,13 +50,13 @@ export default function CollectionsScreen() {
     setCreating(true);
     try {
       await collectionsApi.create({
-        name: newCollectionName.trim(),
-        description: newCollectionDescription.trim() || undefined,
+        title: newCollectionName.trim(),
       });
       setNewCollectionName('');
       setNewCollectionDescription('');
       setShowCreateModal(false);
       await loadCollections();
+      Alert.alert('Success', 'Collection created! A cover image is being generated...');
     } catch (error) {
       Alert.alert('Error', 'Failed to create collection');
     } finally {
@@ -131,20 +138,27 @@ export default function CollectionsScreen() {
               style={styles.collectionCard}
               onPress={() => router.push(`/collection/${collection.id}`)}
             >
-              <View style={styles.collectionImage}>
-                <MapPin size={28} color={colors.primary} />
-              </View>
+              {collection.coverImage ? (
+                <Image 
+                  source={{ uri: collection.coverImage }} 
+                  style={styles.collectionImage}
+                />
+              ) : (
+                <LinearGradient
+                  colors={parseGradient(collection.coverGradient)}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.collectionImage}
+                >
+                  <MapPin size={28} color={colors.background} />
+                </LinearGradient>
+              )}
               <View style={styles.collectionInfo}>
-                <Text style={styles.collectionName}>{collection.name}</Text>
-                {collection.description && (
-                  <Text style={styles.collectionDescription} numberOfLines={2}>
-                    {collection.description}
-                  </Text>
-                )}
+                <Text style={styles.collectionName}>{collection.title}</Text>
               </View>
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => deleteCollection(collection.id, collection.name)}
+                onPress={() => deleteCollection(collection.id, collection.title)}
               >
                 <Trash2 size={20} color={colors.error} />
               </TouchableOpacity>
@@ -273,10 +287,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: radius.sm,
-    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
+    overflow: 'hidden',
   },
   collectionInfo: {
     flex: 1,

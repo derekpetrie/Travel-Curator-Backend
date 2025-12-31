@@ -12,6 +12,7 @@ export interface IStorage {
   getCollections(userId: string): Promise<Collection[]>;
   getCollection(id: number, userId: string): Promise<Collection | undefined>;
   createCollection(collection: InsertCollection): Promise<Collection>;
+  updateCollectionThumbnail(id: number, userId: string, coverImage: string | null, coverGradient: string | null): Promise<void>;
   deleteCollection(id: number, userId: string): Promise<void>;
   
   // Posts
@@ -44,6 +45,17 @@ export class DatabaseStorage implements IStorage {
   async createCollection(collection: InsertCollection): Promise<Collection> {
     const result = await db.insert(collections).values(collection).returning();
     return result[0];
+  }
+
+  async updateCollectionThumbnail(
+    id: number,
+    userId: string,
+    coverImage: string | null,
+    coverGradient: string | null
+  ): Promise<void> {
+    await db.update(collections)
+      .set({ coverImage, coverGradient })
+      .where(and(eq(collections.id, id), eq(collections.userId, userId)));
   }
 
   async deleteCollection(id: number, userId: string): Promise<void> {

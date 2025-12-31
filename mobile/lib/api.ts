@@ -76,9 +76,9 @@ export interface User {
 
 export interface Collection {
   id: number;
-  name: string;
-  description?: string;
-  coverImage?: string;
+  title: string;
+  coverImage?: string | null;
+  coverGradient?: string | null;
   userId: string;
 }
 
@@ -107,7 +107,7 @@ export const authApi = {
 export const collectionsApi = {
   getAll: () => api.get<Collection[]>('/api/collections'),
   getOne: (id: number) => api.get<Collection>(`/api/collections/${id}`),
-  create: (data: { name: string; description?: string }) => 
+  create: (data: { title: string }) => 
     api.post<Collection>('/api/collections', data),
   delete: (id: number) => api.delete(`/api/collections/${id}`),
   getPosts: (id: number) => api.get<Post[]>(`/api/collections/${id}/posts`),

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertCollectionSchema, insertPostSchema, insertPlaceSchema } from "@shared/schema";
 import { OpenAI } from "openai";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { generateCollectionThumbnail } from "./lib/thumbnail";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -56,6 +57,21 @@ export async function registerRoutes(
       const userId = getUserId(req);
       const parsed = insertCollectionSchema.parse({ ...req.body, userId });
       const collection = await storage.createCollection(parsed);
+      
+      // Generate thumbnail in the background (don't block response)
+      generateCollectionThumbnail(parsed.title).then(async (thumbnail) => {
+        try {
+          await storage.updateCollectionThumbnail(
+            collection.id,
+            userId,
+            thumbnail.coverImage,
+            thumbnail.coverGradient
+          );
+        } catch (err) {
+          console.error("Error updating collection thumbnail:", err);
+        }
+      });
+      
       res.json(collection);
     } catch (error) {
       console.error("Error creating collection:", error);

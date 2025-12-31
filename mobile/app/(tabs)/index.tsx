@@ -1,10 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, MapPin } from 'lucide-react-native';
 import { colors, spacing, radius } from '../../lib/colors';
 import { collectionsApi, Collection, Place } from '../../lib/api';
+
+function parseGradient(gradient: string | null | undefined): [string, string] {
+  if (!gradient) return [colors.primary, colors.primaryLight];
+  const parts = gradient.split(',').map(s => s.trim());
+  return [parts[0] || colors.primary, parts[1] || colors.primaryLight];
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -94,11 +101,23 @@ export default function HomeScreen() {
                   style={styles.collectionCard}
                   onPress={() => router.push(`/collection/${collection.id}`)}
                 >
-                  <View style={styles.collectionImage}>
-                    <MapPin size={24} color={colors.primary} />
-                  </View>
+                  {collection.coverImage ? (
+                    <Image 
+                      source={{ uri: collection.coverImage }} 
+                      style={styles.collectionImage}
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={parseGradient(collection.coverGradient)}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.collectionImage}
+                    >
+                      <MapPin size={24} color={colors.background} />
+                    </LinearGradient>
+                  )}
                   <Text style={styles.collectionName} numberOfLines={1}>
-                    {collection.name}
+                    {collection.title}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -189,11 +208,11 @@ const styles = StyleSheet.create({
   collectionImage: {
     width: 140,
     height: 100,
-    backgroundColor: colors.primaryLight,
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
+    overflow: 'hidden',
   },
   collectionName: {
     fontSize: 14,

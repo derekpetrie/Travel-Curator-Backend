@@ -9,6 +9,8 @@ export const collections = pgTable("collections", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull(),
   title: text("title").notNull(),
+  coverImage: text("cover_image"),
+  coverGradient: text("cover_gradient"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
