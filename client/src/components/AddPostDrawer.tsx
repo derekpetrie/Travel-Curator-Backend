@@ -12,7 +12,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
   const [url, setUrl] = useState('');
   const [selectedCollection, setSelectedCollection] = useState<number | null>(null);
   const [newCollectionName, setNewCollectionName] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('existing');
+  const [activeTab, setActiveTab] = useState<TabType>('new');
   const [isSuccess, setIsSuccess] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -59,7 +59,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       setIsSuccess(false);
       setUrl('');
       setNewCollectionName('');
-      setActiveTab('existing');
+      setActiveTab('new');
       setOpen(false);
     }, 2000);
   };
@@ -134,20 +134,6 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                   <div className="flex rounded-lg bg-muted p-1 gap-1">
                     <button
                       type="button"
-                      onClick={() => setActiveTab('existing')}
-                      data-testid="tab-existing"
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all",
-                        activeTab === 'existing' 
-                          ? "bg-background text-foreground shadow-sm" 
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Folder className="w-4 h-4" />
-                      Add to Existing
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setActiveTab('new')}
                       data-testid="tab-new"
                       className={cn(
@@ -159,6 +145,20 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                     >
                       <FolderPlus className="w-4 h-4" />
                       Create New
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('existing')}
+                      data-testid="tab-existing"
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all",
+                        activeTab === 'existing' 
+                          ? "bg-background text-foreground shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Folder className="w-4 h-4" />
+                      Add to Existing
                     </button>
                   </div>
 
