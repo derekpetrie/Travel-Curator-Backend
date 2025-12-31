@@ -1,14 +1,18 @@
 import { Drawer } from 'vaul';
-import { PlusSquare, Link as LinkIcon, Check, Loader2 } from 'lucide-react';
+import { PlusSquare, Link as LinkIcon, Check, Loader2, FolderPlus, Folder } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollections, addPost } from '@/lib/api';
+import { fetchCollections, addPost, createCollection } from '@/lib/api';
+
+type TabType = 'existing' | 'new';
 
 export function AddPostDrawer({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
   const [selectedCollection, setSelectedCollection] = useState<number | null>(null);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('existing');
   const [isSuccess, setIsSuccess] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -18,12 +22,11 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
     enabled: open,
   });
 
-  // Set first collection as default when loaded
   if (collections.length > 0 && selectedCollection === null) {
     setSelectedCollection(collections[0].id);
   }
 
-  const addPostMutation = useMutation({
+  const addToExistingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedCollection) throw new Error('No collection selected');
       return addPost(selectedCollection, url);
@@ -32,20 +35,49 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['places'] });
-      setIsSuccess(true);
-      
-      setTimeout(() => {
-        setIsSuccess(false);
-        setUrl('');
-        setOpen(false);
-      }, 2000);
+      showSuccessAndClose();
     },
   });
 
+  const createNewMutation = useMutation({
+    mutationFn: async () => {
+      const collection = await createCollection(newCollectionName);
+      await addPost(collection.id, url);
+      return collection;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['places'] });
+      showSuccessAndClose();
+    },
+  });
+
+  const showSuccessAndClose = () => {
+    setIsSuccess(true);
+    setTimeout(() => {
+      setIsSuccess(false);
+      setUrl('');
+      setNewCollectionName('');
+      setActiveTab('existing');
+      setOpen(false);
+    }, 2000);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addPostMutation.mutate();
+    if (!canSubmit) return;
+    if (activeTab === 'existing') {
+      addToExistingMutation.mutate();
+    } else {
+      createNewMutation.mutate();
+    }
   };
+
+  const isSubmitting = addToExistingMutation.isPending || createNewMutation.isPending;
+  const canSubmitExisting = url.trim() && selectedCollection;
+  const canSubmitNew = url.trim() && newCollectionName.trim();
+  const canSubmit = activeTab === 'existing' ? canSubmitExisting : canSubmitNew;
 
   return (
     <Drawer.Root shouldScaleBackground open={open} onOpenChange={setOpen}>
@@ -73,7 +105,9 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                     <Check className="w-10 h-10" />
                   </div>
                   <h3 className="font-heading text-xl font-bold text-foreground">Saved!</h3>
-                  <p className="text-muted-foreground">Location extracted and added to collection.</p>
+                  <p className="text-muted-foreground">
+                    {activeTab === 'new' ? 'Collection created and post added.' : 'Location extracted and added to collection.'}
+                  </p>
                 </div>
               ) : isLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -97,51 +131,106 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium ml-1">Select Collection</label>
-                    <div className="grid grid-cols-1 gap-3">
-                      {collections.map((collection: any) => (
-                        <div 
-                          key={collection.id}
-                          onClick={() => setSelectedCollection(collection.id)}
-                          data-testid={`collection-option-${collection.id}`}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                            selectedCollection === collection.id 
-                              ? "border-primary bg-primary/5 shadow-sm" 
-                              : "border-border bg-card hover:bg-muted/50"
-                          )}
-                        >
-                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                            {collection.title[0]}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-bold text-sm">{collection.title}</p>
-                          </div>
-                          <div className={cn(
-                            "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
-                            selectedCollection === collection.id ? "bg-primary border-primary" : "border-muted-foreground/30"
-                          )}>
-                            {selectedCollection === collection.id && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="flex rounded-lg bg-muted p-1 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('existing')}
+                      data-testid="tab-existing"
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all",
+                        activeTab === 'existing' 
+                          ? "bg-background text-foreground shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Folder className="w-4 h-4" />
+                      Add to Existing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('new')}
+                      data-testid="tab-new"
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all",
+                        activeTab === 'new' 
+                          ? "bg-background text-foreground shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                      Create New
+                    </button>
                   </div>
+
+                  {activeTab === 'existing' ? (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium ml-1">Select Collection</label>
+                      <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto">
+                        {collections.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-4">
+                            No collections yet. Create one first!
+                          </p>
+                        ) : (
+                          collections.map((collection: any) => (
+                            <div 
+                              key={collection.id}
+                              onClick={() => setSelectedCollection(collection.id)}
+                              data-testid={`collection-option-${collection.id}`}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                                selectedCollection === collection.id 
+                                  ? "border-primary bg-primary/5 shadow-sm" 
+                                  : "border-border bg-card hover:bg-muted/50"
+                              )}
+                            >
+                              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                                {collection.title[0]}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-bold text-sm">{collection.title}</p>
+                              </div>
+                              <div className={cn(
+                                "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                                selectedCollection === collection.id ? "bg-primary border-primary" : "border-muted-foreground/30"
+                              )}>
+                                {selectedCollection === collection.id && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium ml-1">Collection Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g., Japan 2025, Bali Trip, Hidden Gems..." 
+                        className="w-full h-12 px-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none"
+                        value={newCollectionName}
+                        onChange={(e) => setNewCollectionName(e.target.value)}
+                        required
+                        data-testid="input-collection-name"
+                      />
+                      <p className="text-xs text-muted-foreground ml-1">
+                        A travel-related name will generate a beautiful thumbnail automatically!
+                      </p>
+                    </div>
+                  )}
 
                   <button 
                     type="submit"
-                    disabled={addPostMutation.isPending}
+                    disabled={isSubmitting || !canSubmit}
                     data-testid="button-save-post"
                     className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-lg shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
                   >
-                    {addPostMutation.isPending ? (
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Extracting Places...
+                        {activeTab === 'new' ? 'Creating & Extracting...' : 'Extracting Places...'}
                       </>
                     ) : (
-                      'Save to Collection'
+                      activeTab === 'new' ? 'Create Collection & Save' : 'Save to Collection'
                     )}
                   </button>
                 </form>
