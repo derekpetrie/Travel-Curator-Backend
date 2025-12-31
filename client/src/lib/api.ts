@@ -31,6 +31,16 @@ export async function deleteCollection(id: number): Promise<void> {
   if (!response.ok) throw new Error('Failed to delete collection');
 }
 
+export async function renameCollection(id: number, title: string): Promise<Collection> {
+  const response = await fetch(`${API_BASE}/collections/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  if (!response.ok) throw new Error('Failed to rename collection');
+  return response.json();
+}
+
 export async function fetchPosts(collectionId: number): Promise<Post[]> {
   const response = await fetch(`${API_BASE}/collections/${collectionId}/posts`);
   if (!response.ok) throw new Error('Failed to fetch posts');

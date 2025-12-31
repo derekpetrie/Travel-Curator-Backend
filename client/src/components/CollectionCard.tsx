@@ -1,6 +1,10 @@
 import type { Collection } from '@shared/schema';
+import type { MouseEvent } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { ArrowRight, MapPin, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { renameCollection, deleteCollection } from '@/lib/api';
 
 interface CollectionCardProps {
   collection: Collection & { itemCount?: number };
@@ -14,38 +18,116 @@ function parseGradient(gradient: string | null | undefined): { from: string; to:
 
 export function CollectionCard({ collection }: CollectionCardProps) {
   const gradient = parseGradient(collection.coverGradient);
+  const [showMenu, setShowMenu] = useState(false);
+  const queryClient = useQueryClient();
+
+  const renameMutation = useMutation({
+    mutationFn: async () => {
+      const newTitle = prompt('Enter new name:', collection.title);
+      if (!newTitle || newTitle.trim() === collection.title) return null;
+      return renameCollection(collection.id, newTitle.trim());
+    },
+    onSuccess: (result) => {
+      if (result) {
+        queryClient.invalidateQueries({ queryKey: ['collections'] });
+      }
+      setShowMenu(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!confirm('Delete this collection?')) return null;
+      return deleteCollection(collection.id);
+    },
+    onSuccess: (result) => {
+      if (result !== null) {
+        queryClient.invalidateQueries({ queryKey: ['collections'] });
+      }
+      setShowMenu(false);
+    },
+  });
+
+  const handleMenuClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
   
   return (
-    <Link href={`/collection/${collection.id}`} className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-      {collection.coverImage ? (
-        <img 
-          src={collection.coverImage} 
-          alt={collection.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
-      ) : (
-        <div 
-          className="w-full h-full flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
-          style={{ background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)` }}
-        >
-          <MapPin className="w-12 h-12 text-white/80" />
-        </div>
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-      
-      <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-        <h3 className="font-heading text-xl font-bold mb-1 line-clamp-2 leading-tight">
-          {collection.title}
-        </h3>
-        <div className="flex items-center justify-between">
-          <span className="text-white/80 text-sm font-medium">
-            {collection.itemCount ?? 0} items
-          </span>
-          <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <ArrowRight className="w-4 h-4 text-white" />
+    <div className="relative">
+      <Link href={`/collection/${collection.id}`} className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+        {collection.coverImage ? (
+          <img 
+            src={collection.coverImage} 
+            alt={collection.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <div 
+            className="w-full h-full flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
+            style={{ background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)` }}
+          >
+            <MapPin className="w-12 h-12 text-white/80" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        
+        <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+          <h3 className="font-heading text-xl font-bold mb-1 line-clamp-2 leading-tight">
+            {collection.title}
+          </h3>
+          <div className="flex items-center justify-between">
+            <span className="text-white/80 text-sm font-medium">
+              {collection.itemCount ?? 0} items
+            </span>
+            <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <ArrowRight className="w-4 h-4 text-white" />
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      <button
+        onClick={handleMenuClick}
+        data-testid={`button-menu-collection-${collection.id}`}
+        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors z-10"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+
+      {showMenu && (
+        <>
+          <div 
+            className="fixed inset-0 z-20" 
+            onClick={() => setShowMenu(false)} 
+          />
+          <div className="absolute top-12 right-2 bg-white rounded-lg shadow-lg py-1 z-30 min-w-[140px]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                renameMutation.mutate();
+              }}
+              data-testid={`button-rename-collection-${collection.id}`}
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100"
+            >
+              <Pencil className="w-4 h-4" />
+              Rename
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteMutation.mutate();
+              }}
+              data-testid={`button-delete-collection-${collection.id}`}
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 text-red-600"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

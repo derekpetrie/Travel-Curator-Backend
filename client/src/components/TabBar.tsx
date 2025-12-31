@@ -9,18 +9,14 @@ export function TabBar() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 glass-tab pb-safe-bottom pt-2 px-6">
       <div className="flex justify-between items-center max-w-md mx-auto h-16">
-        <Link href="/">
-          <a className={cn("flex flex-col items-center gap-1 transition-colors", location === '/' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-            <Home className="w-6 h-6" strokeWidth={location === '/' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Home</span>
-          </a>
+        <Link href="/" className={cn("flex flex-col items-center gap-1 transition-colors", location === '/' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          <Home className="w-6 h-6" strokeWidth={location === '/' ? 2.5 : 2} />
+          <span className="text-[10px] font-medium">Home</span>
         </Link>
         
-        <Link href="/search">
-          <a className={cn("flex flex-col items-center gap-1 transition-colors", location === '/search' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-            <Search className="w-6 h-6" strokeWidth={location === '/search' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Search</span>
-          </a>
+        <Link href="/search" className={cn("flex flex-col items-center gap-1 transition-colors", location === '/search' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          <Search className="w-6 h-6" strokeWidth={location === '/search' ? 2.5 : 2} />
+          <span className="text-[10px] font-medium">Search</span>
         </Link>
 
         <AddPostDrawer>
@@ -32,11 +28,9 @@ export function TabBar() {
           </button>
         </AddPostDrawer>
 
-        <Link href="/profile">
-          <a className={cn("flex flex-col items-center gap-1 transition-colors", location === '/profile' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-            <User className="w-6 h-6" strokeWidth={location === '/profile' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Profile</span>
-          </a>
+        <Link href="/profile" className={cn("flex flex-col items-center gap-1 transition-colors", location === '/profile' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          <User className="w-6 h-6" strokeWidth={location === '/profile' ? 2.5 : 2} />
+          <span className="text-[10px] font-medium">Profile</span>
         </Link>
       </div>
     </div>

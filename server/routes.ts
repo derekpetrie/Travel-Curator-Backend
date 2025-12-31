@@ -79,6 +79,49 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/collections/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { title } = req.body;
+
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+
+      // Update the collection title immediately
+      const collection = await storage.updateCollection(id, userId, { 
+        title: title.trim(),
+        coverImage: null,
+        coverGradient: null 
+      });
+
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+
+      // Regenerate thumbnail in the background
+      generateCollectionThumbnail(title.trim()).then(async (thumbnail) => {
+        try {
+          await storage.updateCollectionThumbnail(
+            id,
+            userId,
+            thumbnail.coverImage,
+            thumbnail.coverGradient
+          );
+          console.log(`[Thumbnail] Updated thumbnail for renamed collection: ${title}`);
+        } catch (err) {
+          console.error("Error updating collection thumbnail after rename:", err);
+        }
+      });
+
+      res.json(collection);
+    } catch (error) {
+      console.error("Error renaming collection:", error);
+      res.status(500).json({ error: "Failed to rename collection" });
+    }
+  });
+
   app.delete("/api/collections/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
