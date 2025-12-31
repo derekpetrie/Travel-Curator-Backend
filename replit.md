@@ -57,9 +57,44 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - 2024-12-31: Created landing page for logged-out users
 - 2024-12-31: Protected all API routes with authentication
 
-## Next Steps for Mobile (Expo)
-To create a native mobile app, the frontend needs to be converted to React Native using Expo. This involves:
-1. Setting up Expo project structure
-2. Converting React web components to React Native
-3. Adding mobile navigation (tabs, stack)
-4. Testing with Expo Go on physical device
+## Mobile App (Expo React Native)
+The mobile app is set up in the `mobile/` directory using Expo and React Native.
+
+### Mobile App Structure
+```
+mobile/
+├── app/                    # Expo Router screens
+│   ├── _layout.tsx         # Root layout with auth
+│   ├── login.tsx           # Login screen
+│   ├── (tabs)/             # Tab navigation
+│   │   ├── _layout.tsx     # Tab bar configuration
+│   │   ├── index.tsx       # Home screen
+│   │   ├── collections.tsx # Saved Posts screen
+│   │   └── profile.tsx     # Profile screen
+│   └── collection/
+│       └── [id].tsx        # Collection detail screen
+├── lib/
+│   ├── api.ts              # API client for backend
+│   └── colors.ts           # Design system colors
+└── index.js                # Entry point
+```
+
+### Running the Mobile App
+To test the mobile app on your iPhone:
+
+1. Install Expo Go app on your iPhone from the App Store
+2. In the Replit shell, run: `npx expo start --tunnel`
+3. Scan the QR code with your iPhone camera
+4. The app will open in Expo Go
+
+### Features Implemented
+- Login screen with Replit Auth integration
+- Home screen with recent collections and places
+- Collections list with create/delete functionality
+- Collection detail with posts and places tabs
+- Add post modal (paste TikTok/Instagram links)
+- Profile screen with user info and logout
+
+### API Connection
+The mobile app connects to the same backend at the configured API URL in `app.json`.
+For local development, update `extra.apiUrl` in app.json to match your Replit URL.
