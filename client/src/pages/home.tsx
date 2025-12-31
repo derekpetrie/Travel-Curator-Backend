@@ -29,7 +29,7 @@ export default function Home() {
           ))}
           
           {/* Add New Place Holder */}
-          <button className="aspect-[4/5] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all group">
+          <button className="aspect-[4/5] rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all group">
             <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
               <Plus className="w-6 h-6" />
             </div>

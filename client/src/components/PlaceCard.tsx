@@ -7,7 +7,7 @@ interface PlaceCardProps {
 
 export function PlaceCard({ place }: PlaceCardProps) {
   return (
-    <div className="flex flex-col p-4 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex flex-col p-4 rounded-lg bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-2">
         <div>
           <div className="flex items-center gap-1.5 mb-1">

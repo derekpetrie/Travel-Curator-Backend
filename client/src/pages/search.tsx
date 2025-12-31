@@ -29,7 +29,7 @@ export default function Search() {
           <input 
             type="text" 
             placeholder="Search places, collections..." 
-            className="w-full h-12 pl-11 pr-4 rounded-xl bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none font-medium text-foreground placeholder:text-muted-foreground/70"
+            className="w-full h-12 pl-11 pr-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none font-medium text-foreground placeholder:text-muted-foreground/70"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -86,7 +86,7 @@ export default function Search() {
                     <div className="grid grid-cols-2 gap-4">
                       {filteredCollections.map(collection => (
                          <Link key={collection.id} href={`/collection/${collection.id}`}>
-                           <a className="group block bg-card rounded-xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
+                           <a className="group block bg-card rounded-lg overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
                              <div className="aspect-square relative">
                                <img src={collection.thumbnail} className="w-full h-full object-cover" alt="" />
                                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
@@ -112,8 +112,8 @@ export default function Search() {
                   {/* Just showing some mock hits for "Tokyo" if query matches, else generic */}
                   {query.toLowerCase().includes('tokyo') || query.toLowerCase().includes('ramen') ? (
                     <div className="space-y-3">
-                       <div className="flex items-center gap-4 p-3 bg-card border border-border rounded-xl">
-                          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                       <div className="flex items-center gap-4 p-3 bg-card border border-border rounded-lg">
+                          <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
                             <MapPin className="w-6 h-6 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -124,8 +124,8 @@ export default function Search() {
                             <ArrowRight className="w-4 h-4" />
                           </button>
                        </div>
-                       <div className="flex items-center gap-4 p-3 bg-card border border-border rounded-xl">
-                          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                       <div className="flex items-center gap-4 p-3 bg-card border border-border rounded-lg">
+                          <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
                             <MapPin className="w-6 h-6 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">

@@ -48,7 +48,7 @@ export default function CollectionDetail() {
 
         {/* Title Area */}
         <div className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-8">
-           <div className="bg-card shadow-xl rounded-2xl p-5 border border-border/50">
+           <div className="bg-card shadow-xl rounded-xl p-5 border border-border/50">
              <h1 className="font-heading text-2xl font-bold mb-1">{collection.title}</h1>
              <p className="text-muted-foreground text-sm font-medium">
                {collection.itemCount} items • Created on {collection.createdAt}
@@ -62,11 +62,11 @@ export default function CollectionDetail() {
 
       {/* Tabs */}
       <div className="px-6 mt-4 mb-6">
-        <div className="flex p-1 bg-muted rounded-xl">
+        <div className="flex p-1 bg-muted rounded-lg">
           <button 
             onClick={() => setActiveTab('posts')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all",
+              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
               activeTab === 'posts' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -76,7 +76,7 @@ export default function CollectionDetail() {
           <button 
             onClick={() => setActiveTab('places')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all",
+              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
               activeTab === 'places' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -86,7 +86,7 @@ export default function CollectionDetail() {
           <button 
             onClick={() => setActiveTab('map')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all",
+              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
               activeTab === 'map' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >

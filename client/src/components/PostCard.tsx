@@ -7,8 +7,8 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   return (
-    <div className="flex gap-4 p-3 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-colors shadow-sm">
-      <div className="relative w-24 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+    <div className="flex gap-4 p-3 rounded-lg bg-card border border-border/50 hover:border-primary/20 transition-colors shadow-sm">
+      <div className="relative w-24 h-32 flex-shrink-0 rounded-md overflow-hidden bg-muted">
         <img 
           src={post.thumbnailUrl} 
           alt="Thumbnail" 

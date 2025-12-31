@@ -9,7 +9,7 @@ interface CollectionCardProps {
 export function CollectionCard({ collection }: CollectionCardProps) {
   return (
     <Link href={`/collection/${collection.id}`}>
-      <a className="group block relative overflow-hidden rounded-2xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+      <a className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
         <img 
           src={collection.thumbnail} 
           alt={collection.title}

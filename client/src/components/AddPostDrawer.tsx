@@ -64,7 +64,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                       <input 
                         type="url" 
                         placeholder="https://www.tiktok.com/@..." 
-                        className="w-full h-12 pl-10 pr-4 rounded-xl bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none"
+                        className="w-full h-12 pl-10 pr-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         required
@@ -80,13 +80,13 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                           key={collection.id}
                           onClick={() => setSelectedCollection(collection.id)}
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
+                            "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                             selectedCollection === collection.id 
                               ? "border-primary bg-primary/5 shadow-sm" 
                               : "border-border bg-card hover:bg-muted/50"
                           )}
                         >
-                          <img src={collection.thumbnail} className="w-10 h-10 rounded-lg object-cover bg-muted" alt="" />
+                          <img src={collection.thumbnail} className="w-10 h-10 rounded-md object-cover bg-muted" alt="" />
                           <div className="flex-1">
                             <p className="font-bold text-sm">{collection.title}</p>
                             <p className="text-xs text-muted-foreground">{collection.itemCount} items</p>
@@ -104,7 +104,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
 
                   <button 
                     disabled={isSimulating}
-                    className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
+                    className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-lg shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
                   >
                     {isSimulating ? (
                       <>

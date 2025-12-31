@@ -14,39 +14,39 @@ export default function Profile() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-card p-4 rounded-2xl border border-border text-center shadow-sm">
+          <div className="bg-card p-4 rounded-xl border border-border text-center shadow-sm">
             <div className="text-2xl font-bold text-primary mb-1">142</div>
             <div className="text-xs text-muted-foreground font-bold uppercase tracking-wide">Places Saved</div>
           </div>
-          <div className="bg-card p-4 rounded-2xl border border-border text-center shadow-sm">
+          <div className="bg-card p-4 rounded-xl border border-border text-center shadow-sm">
             <div className="text-2xl font-bold text-primary mb-1">12</div>
             <div className="text-xs text-muted-foreground font-bold uppercase tracking-wide">Collections</div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:bg-muted/50 transition-colors">
+          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors">
             <div className="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
               <Heart className="w-4 h-4 fill-current" />
             </div>
             <span className="font-medium">Liked Posts</span>
           </button>
           
-          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:bg-muted/50 transition-colors">
+          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors">
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center">
               <MapPin className="w-4 h-4" />
             </div>
             <span className="font-medium">Map Settings</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:bg-muted/50 transition-colors">
+          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors">
             <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center">
               <Settings className="w-4 h-4" />
             </div>
             <span className="font-medium">Preferences</span>
           </button>
           
-          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:bg-muted/50 transition-colors text-red-500">
+          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors text-red-500">
             <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
               <LogOut className="w-4 h-4" />
             </div>
