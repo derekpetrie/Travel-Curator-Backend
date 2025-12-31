@@ -1,0 +1,462 @@
+Below is a **full, detailed product specification** for your use case—optimized for tools like **Replit Ghostwriter**, **Lovable**, or any AI code-generation environment. It’s structured the way PMs write specs for engineering teams, with clear scope, flows, data models, APIs, and implementation notes. You can directly paste this into Lovable/Replit as a blueprint for scaffolding the app.
+
+---
+
+# 📘 PRODUCT SPECIFICATION
+
+## **Product:** Social-to-Travel Curator App
+
+## **Feature:** Users share TikTok + Instagram posts → App extracts locations → Creates travel recommendations & collections
+
+## **Version:** v1.0 (MVP)
+
+## **Platforms:** iOS (Swift/SwiftUI) + Backend (Node / Python / Go — implementation-agnostic)
+
+---
+
+# 1. **Problem Statement**
+
+Travel inspiration increasingly comes from short-form video platforms (TikTok, Instagram Reels). Users want to save the places shown in these videos and automatically create collections of travel recommendations.
+
+However:
+
+* TikTok & Instagram do **not** expose APIs for reading a user’s saved or liked posts.
+* Sharing links manually is tedious.
+* Users want an easy “Save to Trip Plan” action from within TikTok/Instagram.
+
+**Goal:**
+Enable users to share TikTok/Instagram links to the app (via iOS Share Extension or manual paste), and automatically generate curated, location-based travel recommendations.
+
+---
+
+# 2. **User Personas**
+
+### **Primary Persona: The Traveler**
+
+* Uses TikTok/Instagram for inspiration.
+* Wants to save interesting places quickly.
+* Wants an organized collection that extracts the places from videos.
+
+### **Secondary Persona: The Planner**
+
+* Wants to build a trip list.
+* Likes seeing curated maps, itineraries, and grouped locations.
+
+---
+
+# 3. **User Stories (MVP)**
+
+### **Core Stories**
+
+1. **As a user**, I want to share a TikTok or Instagram link from the Share Sheet into the app, so it gets added to my travel collection.
+2. **As a user**, I want to create a new travel collection.
+3. **As a user**, I want to view all the posts I’ve added to a collection.
+4. **As a user**, I want the app to automatically extract locations, restaurants, landmarks, and experiences from those posts.
+5. **As a user**, I want to see curated places on a map or list.
+
+### **Secondary Stories (MVP+)**
+
+6. As a user, I want to edit metadata for a place (name, location).
+7. As a user, I want to drag items to reorder collections.
+8. As a user, I want to open the original TikTok/Instagram post from the app.
+
+---
+
+# 4. **High-Level Architecture**
+
+```
+User Shares → iOS Share Extension → Backend → Metadata Extraction → LLM Location Parsing → Stored as Items → Display in App
+```
+
+* **iOS App**
+
+  * Swift/SwiftUI
+  * Auth for backend
+  * Collections UI + Map UI
+* **Share Extension**
+
+  * Receives `URL`
+  * Sends `{ url, collectionId, authToken }` to backend
+* **Backend API**
+
+  * Normalizes URLs
+  * Fetches metadata (oEmbed → OpenGraph)
+  * Runs LLM location extraction
+  * Stores results in DB
+  * Returns curated places
+
+---
+
+# 5. **Feature Specification**
+
+## 5.1 **iOS App Features**
+
+### **Home Screen**
+
+* List of Travel Collections (`title`, `thumbnail`, `#items`)
+* Button: “Create New Collection”
+
+### **Collection Screen**
+
+* Displays:
+
+  * All shared Posts
+  * “Curated Places” section
+* Tabs:
+
+  * **Posts** (list)
+  * **Places** (list)
+  * **Map** (map pins of extracted places)
+
+### **Post Detail**
+
+* Thumbnail
+* Caption snippet
+* Source (TikTok / Instagram)
+* Button “Open Original” → deep link or SFSafariViewController
+
+### **Place Detail**
+
+* Name
+* Coordinates
+* Map preview (MKMapView)
+* Source posts that produced this place
+
+---
+
+# 6. **Share Extension Specification**
+
+### **Trigger**
+
+User taps:
+
+* TikTok → Share → YourApp
+* Instagram → Share → YourApp
+
+### **UI**
+
+* Minimal UI:
+
+  * Dropdown to select collection (fetched via shared App Group token)
+  * “Add” button
+
+### **Data Handling**
+
+* Obtain shared URL from `NSExtensionItem`
+* Post to backend:
+
+```
+POST /collections/{id}/add-post
+{
+  "url": "<post_url>",
+  "source": "auto-detected",
+  "authToken": "<JWT from App Group>"
+}
+```
+
+### **Extension Requirements**
+
+* Uses **App Groups** for storing tokens
+* 1–2 second max UI interaction
+* No deep ML processing in extension
+
+---
+
+# 7. **Backend Specification**
+
+## 7.1 **Endpoints**
+
+### **Auth**
+
+```
+POST /auth/device-login
+→ returns JWT for app + extension
+```
+
+### **Collections**
+
+```
+POST /collections
+GET /collections
+GET /collections/{id}
+PATCH /collections/{id}
+DELETE /collections/{id}
+```
+
+### **Add Post to Collection**
+
+```
+POST /collections/{id}/add-post
+{
+  "url": "https://...",
+  "source": "tiktok|instagram",
+  "authToken": "string"
+}
+Response:
+{
+  "postId": "uuid"
+}
+```
+
+### **Get Curated Places**
+
+```
+GET /collections/{id}/places
+```
+
+---
+
+## 7.2 **Backend Processing Pipeline**
+
+### **1. URL Normalization**
+
+* Validate TikTok/Instagram URL
+* Extract post ID if possible
+
+### **2. Metadata Retrieval**
+
+Priority:
+
+1. TikTok oEmbed
+   `https://www.tiktok.com/oembed?url=<url>`
+2. Instagram oEmbed
+   `https://graph.facebook.com/v17.0/instagram_oembed?url=<url>`
+3. Fallback: Scrape OpenGraph tags
+
+Metadata fields:
+
+```
+title
+author
+thumbnail_url
+html (embed HTML)
+description/caption
+upload_date
+```
+
+### **3. LLM Location Extraction**
+
+Prompt example:
+
+```
+You are a travel data extraction assistant. Given this TikTok/Instagram caption and context, extract places mentioned with city, country, and category.
+Respond in JSON only.
+```
+
+Output format:
+
+```
+[
+  {
+    "name": "Shinjuku Ramen Omoide Yokocho",
+    "city": "Tokyo",
+    "country": "Japan",
+    "category": "restaurant",
+    "lat": null,
+    "lng": null,
+    "confidence": 0.92
+  }
+]
+```
+
+### **4. Geocoding**
+
+If name+city exist, geocode via:
+
+* Google Places API / Apple Maps API
+
+### **5. Storage in DB**
+
+Tables:
+
+#### **Users**
+
+```
+id
+createdAt
+```
+
+#### **Collections**
+
+```
+id
+userId
+title
+createdAt
+```
+
+#### **Posts**
+
+```
+id
+collectionId
+source (tiktok|instagram)
+url
+thumbnailUrl
+caption
+metadataJson
+createdAt
+```
+
+#### **Places**
+
+```
+id
+collectionId
+name
+city
+country
+lat
+lng
+category
+originPostIds (array)
+confidence
+createdAt
+```
+
+---
+
+# 8. **iOS Data Models (Swift)**
+
+```swift
+struct TravelCollection: Identifiable, Codable {
+    let id: String
+    let title: String
+    let posts: [SharedPost]
+    let places: [Place]
+}
+
+struct SharedPost: Identifiable, Codable {
+    let id: String
+    let url: URL
+    let source: Source
+    let thumbnailURL: URL?
+    let caption: String?
+}
+
+enum Source: String, Codable {
+    case tiktok
+    case instagram
+}
+
+struct Place: Identifiable, Codable {
+    let id: String
+    let name: String
+    let city: String?
+    let country: String?
+    let latitude: Double?
+    let longitude: Double?
+    let category: String?
+    let postIds: [String]
+}
+```
+
+---
+
+# 9. **Detailed User Flow (MVP)**
+
+## **Flow: Share TikTok → Add to Collection**
+
+### Step 1 — User in TikTok
+
+Clicks **Share → More → YourApp**.
+
+### Step 2 — Share Extension
+
+* Extract URL
+* Ask user to pick a collection
+* POST to backend
+* Close extension
+
+### Step 3 — Backend
+
+* Fetch metadata
+* Run location extraction
+* Update collection summary
+
+### Step 4 — User Opens App
+
+* Sees updated collection
+* Places appear in “Curated Places” tab
+
+---
+
+# 10. **Non-Functional Requirements**
+
+### **Performance**
+
+* Share Extension must complete request < 2 seconds.
+* Backend metadata fetch + LLM run should complete < 5 seconds.
+
+### **Security**
+
+* No secret keys in app.
+* App Groups + Keychain for token.
+* Backend must validate URL origin.
+
+### **Scalability**
+
+* Batch metadata processing allowed.
+* LLM calls should be async-queued.
+
+---
+
+# 11. **Stretch Goals (v2+)**
+
+* Shared collections with friends
+* Itinerary auto-generation
+* Multi-city clustering
+* Offline mode / caching
+* Export to Google Maps / Apple Maps
+* Browser extension for desktop link saving
+
+---
+
+# 12. **What to Generate First Inside Replit/Lovable**
+
+### **1. Backend Scaffold**
+
+* Collections CRUD
+* Add Post API
+* URL metadata fetcher
+* LLM extraction stub
+* DB models
+
+### **2. iOS App Scaffold (SwiftUI)**
+
+* Login screen
+* Home list of collections
+* Create collection screen
+* Collection detail (Posts + Places)
+* Network manager
+
+### **3. Share Extension**
+
+* Minimal UI
+* URL extraction
+* API call
+
+---
+
+# 13. **Deliverables This Spec Supports**
+
+You can now ask Replit or Lovable to generate:
+
+✓ Backend REST API
+✓ DB schema + migrations
+✓ URL metadata fetcher module
+✓ iOS SwiftUI project with networking + screens
+✓ Full Share Extension
+✓ Collection detail UI
+✓ Map UI with MKMapView
+
+---
+
+If you want, I can now generate:
+
+**A. A Replit-ready backend project scaffold (Node or Python)**
+**B. A Lovable-ready iOS project scaffold**
+**C. A GitHub-style README for this entire system**
+**D. A technical architecture diagram**
+
+Which one would you like next?
