@@ -20,6 +20,7 @@ function getRandomGradient(): string {
 export async function generateCollectionThumbnail(
   collectionName: string
 ): Promise<{ coverImage: string | null; coverGradient: string | null }> {
+  console.log(`[Thumbnail] Starting generation for: "${collectionName}"`);
   try {
     const analysisResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -45,13 +46,18 @@ Respond with JSON only: { "isMeaningful": boolean, "imagePrompt": string | null 
     const analysis = JSON.parse(
       analysisResponse.choices[0]?.message?.content || "{}"
     );
+    console.log(`[Thumbnail] Analysis result:`, analysis);
 
     if (!analysis.isMeaningful || !analysis.imagePrompt) {
+      const gradient = getRandomGradient();
+      console.log(`[Thumbnail] Using gradient fallback: ${gradient}`);
       return {
         coverImage: null,
-        coverGradient: getRandomGradient(),
+        coverGradient: gradient,
       };
     }
+    
+    console.log(`[Thumbnail] Generating image for prompt: "${analysis.imagePrompt}"`)
 
     const imageResponse = await openai.images.generate({
       model: "gpt-image-1",
@@ -61,18 +67,20 @@ Respond with JSON only: { "isMeaningful": boolean, "imagePrompt": string | null 
 
     const base64 = imageResponse.data[0]?.b64_json;
     if (base64) {
+      console.log(`[Thumbnail] Image generated successfully (${base64.length} chars)`);
       return {
         coverImage: `data:image/png;base64,${base64}`,
         coverGradient: null,
       };
     }
 
+    console.log(`[Thumbnail] No image data received, using gradient fallback`);
     return {
       coverImage: null,
       coverGradient: getRandomGradient(),
     };
   } catch (error) {
-    console.error("Error generating thumbnail:", error);
+    console.error("[Thumbnail] Error generating thumbnail:", error);
     return {
       coverImage: null,
       coverGradient: getRandomGradient(),

@@ -39,13 +39,11 @@ export default function Home() {
             return {
               ...collection,
               itemCount: posts.length,
-              thumbnail: posts[0]?.thumbnailUrl || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=500&fit=crop',
             };
           } catch {
             return {
               ...collection,
               itemCount: 0,
-              thumbnail: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=500&fit=crop',
             };
           }
         })
