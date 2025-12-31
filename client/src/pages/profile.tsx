@@ -1,5 +1,6 @@
 import { TabBar } from '@/components/TabBar';
 import { Settings, LogOut, MapPin, Heart } from 'lucide-react';
+import { Link } from 'wouter';
 
 export default function Profile() {
   return (
@@ -25,12 +26,14 @@ export default function Profile() {
         </div>
 
         <div className="space-y-2">
-          <button className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
-              <Heart className="w-4 h-4 fill-current" />
-            </div>
-            <span className="font-medium">Liked Posts</span>
-          </button>
+          <Link href="/liked">
+            <a className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
+                <Heart className="w-4 h-4 fill-current" />
+              </div>
+              <span className="font-medium">Liked Posts</span>
+            </a>
+          </Link>
           
           <button className="w-full flex items-center gap-3 p-4 bg-card rounded-lg border border-border hover:bg-muted/50 transition-colors">
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center">

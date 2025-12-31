@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import CollectionDetail from "@/pages/collection-detail";
 import Profile from "@/pages/profile";
 import Search from "@/pages/search";
+import LikedPosts from "@/pages/liked-posts";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/search" component={Search} />
       <Route path="/profile" component={Profile} />
+      <Route path="/liked" component={LikedPosts} />
       <Route path="/collection/:id" component={CollectionDetail} />
       <Route component={NotFound} />
     </Switch>
