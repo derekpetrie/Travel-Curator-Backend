@@ -3,14 +3,11 @@ import { pgTable, text, varchar, timestamp, real, jsonb, integer, serial } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
+export * from "./models/auth";
 
 export const collections = pgTable("collections", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
   title: text("title").notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
@@ -40,11 +37,6 @@ export const places = pgTable("places", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
 export const insertCollectionSchema = createInsertSchema(collections).omit({
   id: true,
   createdAt: true,
@@ -60,8 +52,6 @@ export const insertPlaceSchema = createInsertSchema(places).omit({
   createdAt: true,
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
 export type Collection = typeof collections.$inferSelect;
 export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Post = typeof posts.$inferSelect;

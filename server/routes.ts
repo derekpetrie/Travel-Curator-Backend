@@ -1,23 +1,34 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertCollectionSchema, insertPostSchema, insertPlaceSchema } from "@shared/schema";
 import { OpenAI } from "openai";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// Helper to get userId from request
+function getUserId(req: Request): string {
+  return (req.user as any)?.claims?.sub;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
-  // Collections
-  app.get("/api/collections", async (req, res) => {
+  // Setup authentication FIRST
+  await setupAuth(app);
+  registerAuthRoutes(app);
+  
+  // Collections - protected routes
+  app.get("/api/collections", isAuthenticated, async (req, res) => {
     try {
-      const collections = await storage.getCollections();
+      const userId = getUserId(req);
+      const collections = await storage.getCollections(userId);
       res.json(collections);
     } catch (error) {
       console.error("Error fetching collections:", error);
@@ -25,10 +36,11 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/collections/:id", async (req, res) => {
+  app.get("/api/collections/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const collection = await storage.getCollection(id);
+      const userId = getUserId(req);
+      const collection = await storage.getCollection(id, userId);
       if (!collection) {
         return res.status(404).json({ error: "Collection not found" });
       }
@@ -39,9 +51,10 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/collections", async (req, res) => {
+  app.post("/api/collections", isAuthenticated, async (req, res) => {
     try {
-      const parsed = insertCollectionSchema.parse(req.body);
+      const userId = getUserId(req);
+      const parsed = insertCollectionSchema.parse({ ...req.body, userId });
       const collection = await storage.createCollection(parsed);
       res.json(collection);
     } catch (error) {
@@ -50,10 +63,11 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/collections/:id", async (req, res) => {
+  app.delete("/api/collections/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.deleteCollection(id);
+      const userId = getUserId(req);
+      await storage.deleteCollection(id, userId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting collection:", error);
@@ -61,10 +75,16 @@ export async function registerRoutes(
     }
   });
 
-  // Posts
-  app.get("/api/collections/:collectionId/posts", async (req, res) => {
+  // Posts - protected routes
+  app.get("/api/collections/:collectionId/posts", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);
+      const userId = getUserId(req);
+      // Verify collection belongs to user
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
       const posts = await storage.getPosts(collectionId);
       res.json(posts);
     } catch (error) {
@@ -73,7 +93,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/collections/:collectionId/posts", async (req, res) => {
+  app.post("/api/collections/:collectionId/posts", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);
       const { url } = req.body;
@@ -128,7 +148,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/posts/:id", async (req, res) => {
+  app.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deletePost(id);
@@ -139,10 +159,16 @@ export async function registerRoutes(
     }
   });
 
-  // Places
-  app.get("/api/collections/:collectionId/places", async (req, res) => {
+  // Places - protected routes
+  app.get("/api/collections/:collectionId/places", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);
+      const userId = getUserId(req);
+      // Verify collection belongs to user
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
       const places = await storage.getPlaces(collectionId);
       res.json(places);
     } catch (error) {
@@ -151,7 +177,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/places/:id", async (req, res) => {
+  app.delete("/api/places/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deletePlace(id);

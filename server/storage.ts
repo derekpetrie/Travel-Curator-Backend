@@ -1,32 +1,18 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { db } from "./db";
 import { 
-  users, collections, posts, places,
-  type User, type InsertUser,
+  collections, posts, places,
   type Collection, type InsertCollection,
   type Post, type InsertPost,
   type Place, type InsertPlace
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
-
-const client = new pg.Client({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-await client.connect();
-export const db = drizzle(client);
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
-  // Users
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
   // Collections
-  getCollections(): Promise<Collection[]>;
-  getCollection(id: number): Promise<Collection | undefined>;
+  getCollections(userId: string): Promise<Collection[]>;
+  getCollection(id: number, userId: string): Promise<Collection | undefined>;
   createCollection(collection: InsertCollection): Promise<Collection>;
-  deleteCollection(id: number): Promise<void>;
+  deleteCollection(id: number, userId: string): Promise<void>;
   
   // Posts
   getPosts(collectionId: number): Promise<Post[]>;
@@ -42,29 +28,16 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Users
-  async getUser(id: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id));
-    return result[0];
+  // Collections - now scoped by userId
+  async getCollections(userId: string): Promise<Collection[]> {
+    return await db.select().from(collections)
+      .where(eq(collections.userId, userId))
+      .orderBy(desc(collections.createdAt));
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username));
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
-    return result[0];
-  }
-
-  // Collections
-  async getCollections(): Promise<Collection[]> {
-    return await db.select().from(collections).orderBy(desc(collections.createdAt));
-  }
-
-  async getCollection(id: number): Promise<Collection | undefined> {
-    const result = await db.select().from(collections).where(eq(collections.id, id));
+  async getCollection(id: number, userId: string): Promise<Collection | undefined> {
+    const result = await db.select().from(collections)
+      .where(and(eq(collections.id, id), eq(collections.userId, userId)));
     return result[0];
   }
 
@@ -73,8 +46,9 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async deleteCollection(id: number): Promise<void> {
-    await db.delete(collections).where(eq(collections.id, id));
+  async deleteCollection(id: number, userId: string): Promise<void> {
+    await db.delete(collections)
+      .where(and(eq(collections.id, id), eq(collections.userId, userId)));
   }
 
   // Posts
