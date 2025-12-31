@@ -6,11 +6,13 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import CollectionDetail from "@/pages/collection-detail";
 import Profile from "@/pages/profile";
+import Search from "@/pages/search";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/search" component={Search} />
       <Route path="/profile" component={Profile} />
       <Route path="/collection/:id" component={CollectionDetail} />
       <Route component={NotFound} />
