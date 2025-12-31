@@ -1,34 +1,54 @@
 import { Drawer } from 'vaul';
-import { PlusSquare, Link as LinkIcon, Check } from 'lucide-react';
+import { PlusSquare, Link as LinkIcon, Check, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { MOCK_COLLECTIONS } from '@/lib/mockData';
 import { cn } from '@/lib/utils';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchCollections, addPost } from '@/lib/api';
 
 export function AddPostDrawer({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
-  const [selectedCollection, setSelectedCollection] = useState(MOCK_COLLECTIONS[0].id);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState<number | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSimulating(true);
-    
-    // Simulate backend processing
-    setTimeout(() => {
-      setIsSimulating(false);
+  const { data: collections = [], isLoading } = useQuery({
+    queryKey: ['collections'],
+    queryFn: fetchCollections,
+    enabled: open,
+  });
+
+  // Set first collection as default when loaded
+  if (collections.length > 0 && selectedCollection === null) {
+    setSelectedCollection(collections[0].id);
+  }
+
+  const addPostMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCollection) throw new Error('No collection selected');
+      return addPost(selectedCollection, url);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['places'] });
       setIsSuccess(true);
       
-      // Reset after showing success
       setTimeout(() => {
         setIsSuccess(false);
         setUrl('');
+        setOpen(false);
       }, 2000);
-    }, 1500);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addPostMutation.mutate();
   };
 
   return (
-    <Drawer.Root shouldScaleBackground>
+    <Drawer.Root shouldScaleBackground open={open} onOpenChange={setOpen}>
       <Drawer.Trigger asChild>
         {children}
       </Drawer.Trigger>
@@ -55,6 +75,10 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                   <h3 className="font-heading text-xl font-bold text-foreground">Saved!</h3>
                   <p className="text-muted-foreground">Location extracted and added to collection.</p>
                 </div>
+              ) : isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
@@ -68,6 +92,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         required
+                        data-testid="input-post-url"
                       />
                     </div>
                   </div>
@@ -75,10 +100,11 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                   <div className="space-y-2">
                     <label className="text-sm font-medium ml-1">Select Collection</label>
                     <div className="grid grid-cols-1 gap-3">
-                      {MOCK_COLLECTIONS.map(collection => (
+                      {collections.map((collection: any) => (
                         <div 
                           key={collection.id}
                           onClick={() => setSelectedCollection(collection.id)}
+                          data-testid={`collection-option-${collection.id}`}
                           className={cn(
                             "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                             selectedCollection === collection.id 
@@ -86,10 +112,11 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                               : "border-border bg-card hover:bg-muted/50"
                           )}
                         >
-                          <img src={collection.thumbnail} className="w-10 h-10 rounded-md object-cover bg-muted" alt="" />
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                            {collection.title[0]}
+                          </div>
                           <div className="flex-1">
                             <p className="font-bold text-sm">{collection.title}</p>
-                            <p className="text-xs text-muted-foreground">{collection.itemCount} items</p>
                           </div>
                           <div className={cn(
                             "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
@@ -103,12 +130,14 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                   </div>
 
                   <button 
-                    disabled={isSimulating}
+                    type="submit"
+                    disabled={addPostMutation.isPending}
+                    data-testid="button-save-post"
                     className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-lg shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
                   >
-                    {isSimulating ? (
+                    {addPostMutation.isPending ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                         Extracting Places...
                       </>
                     ) : (
