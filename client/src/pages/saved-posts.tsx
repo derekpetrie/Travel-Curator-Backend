@@ -1,14 +1,14 @@
 import { useLocation, Link } from 'wouter';
 import { PostCard } from '@/components/PostCard';
 import { MOCK_COLLECTIONS } from '@/lib/mockData';
-import { ChevronLeft, Heart } from 'lucide-react';
+import { ChevronLeft, Bookmark } from 'lucide-react';
 import { TabBar } from '@/components/TabBar';
 
-export default function LikedPosts() {
+export default function SavedPosts() {
   const [, setLocation] = useLocation();
 
-  // Aggregate all posts from collections to simulate a "Liked" feed for the mockup
-  const allLikedPosts = MOCK_COLLECTIONS.flatMap(c => c.posts);
+  // Aggregate all posts from collections to simulate a "Saved" feed
+  const allSavedPosts = MOCK_COLLECTIONS.flatMap(c => c.posts);
 
   return (
     <div className="min-h-screen pb-24 bg-background safe-top">
@@ -20,29 +20,29 @@ export default function LikedPosts() {
               <ChevronLeft className="w-6 h-6" />
             </a>
           </Link>
-          <h1 className="font-heading text-2xl font-bold">Liked Posts</h1>
+          <h1 className="font-heading text-2xl font-bold">Saved Posts</h1>
         </div>
       </div>
 
       {/* Content */}
       <div className="px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {allLikedPosts.length > 0 ? (
+        {allSavedPosts.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
-            {allLikedPosts.map(post => (
+            {allSavedPosts.map(post => (
               <PostCard key={post.id} post={post} />
             ))}
             {/* Duplicate for demo density */}
-            {allLikedPosts.map(post => (
+            {allSavedPosts.map(post => (
               <PostCard key={`${post.id}-duplicate`} post={{...post, id: `${post.id}-duplicate`}} />
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <Heart className="w-8 h-8 text-muted-foreground/50" />
+              <Bookmark className="w-8 h-8 text-muted-foreground/50" />
             </div>
-            <h3 className="font-bold text-lg text-foreground mb-1">No likes yet</h3>
-            <p className="text-sm">Posts you like will appear here.</p>
+            <h3 className="font-bold text-lg text-foreground mb-1">No saved posts</h3>
+            <p className="text-sm">Posts you share to Venturr will appear here.</p>
           </div>
         )}
       </div>
