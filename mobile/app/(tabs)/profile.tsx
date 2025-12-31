@@ -1,28 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, LogOut, Settings, HelpCircle, Star } from 'lucide-react-native';
 import { colors, spacing, radius } from '../../lib/colors';
-import { authApi, User as UserType, api } from '../../lib/api';
+import { useAuth } from '../../lib/auth-context';
 
 export default function ProfileScreen() {
-  const [user, setUser] = useState<UserType | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  async function loadUser() {
-    try {
-      const userData = await authApi.getUser();
-      setUser(userData);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { user, logout } = useAuth();
 
   async function handleLogout() {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -30,14 +14,7 @@ export default function ProfileScreen() {
       {
         text: 'Log Out',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await authApi.logout();
-            await api.clearToken();
-          } catch (error) {
-            console.error('Logout failed:', error);
-          }
-        },
+        onPress: logout,
       },
     ]);
   }

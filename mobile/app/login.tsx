@@ -1,23 +1,42 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
 import { MapPin, Chrome, Github, Apple, Mail } from 'lucide-react-native';
 import { colors, spacing, radius } from '../lib/colors';
+import { useAuth } from '../lib/auth-context';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:5000';
 
 export default function LoginScreen() {
+  const { checkAuth } = useAuth();
+
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+    return () => subscription.remove();
+  }, []);
+
+  async function handleDeepLink(event: { url: string }) {
+    if (event.url.includes('auth/callback') || event.url.includes('venturr://')) {
+      await checkAuth();
+    }
+  }
+
   async function handleLogin() {
     try {
+      const redirectUrl = Linking.createURL('auth/callback');
+      
       const result = await WebBrowser.openAuthSessionAsync(
-        `${API_URL}/api/login`,
-        'venturr://auth/callback'
+        `${API_URL}/api/login?redirect=${encodeURIComponent(redirectUrl)}`,
+        redirectUrl
       );
       
       if (result.type === 'success') {
-        Linking.openURL('venturr://');
+        await checkAuth();
       }
     } catch (error) {
       Alert.alert('Login Failed', 'Unable to open login page. Please try again.');
