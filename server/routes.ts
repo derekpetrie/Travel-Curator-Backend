@@ -322,7 +322,7 @@ export async function registerRoutes(
       
       // Step 3: If still no places, set warning message
       if (extractedPlaces.length === 0) {
-        extractionWarning = "We couldn't identify specific locations from this post. The description and image didn't contain enough location details for us to extract places.";
+        extractionWarning = "No locations found in this post. You can add places manually from the Places tab.";
         console.log("[Extraction] No places found from text or vision");
       }
       
@@ -558,10 +558,17 @@ async function fetchIframelyMetadata(url: string, source: string): Promise<{
     hasThumbnail: !!data.thumbnail_url,
   });
 
+  // Combine title and description for better place extraction
+  // Description often contains location details not in title
+  let caption = data.title || null;
+  if (data.description && data.description !== data.title) {
+    caption = caption ? `${caption}\n\n${data.description}` : data.description;
+  }
+  
   return {
     source,
     thumbnailUrl: data.thumbnail_url || null,
-    caption: data.title || null,
+    caption,
     author: data.author_name || null,
     raw: data,
   };
