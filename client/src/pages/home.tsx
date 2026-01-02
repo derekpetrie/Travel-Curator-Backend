@@ -109,7 +109,7 @@ export default function Home() {
       <main className="px-6 py-6">
         {/* Sort Controls */}
         <div className="flex justify-end mb-4">
-          <DropdownMenu>
+          <DropdownMenu modal={true}>
             <DropdownMenuTrigger asChild>
               <button 
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
