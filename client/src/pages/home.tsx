@@ -50,7 +50,9 @@ export default function Home() {
         collections.map(async (collection: Collection) => {
           try {
             const posts = await fetchPosts(collection.id);
-            const firstPostThumbnail = posts.length > 0 ? posts[0].thumbnailUrl : null;
+            // Find first post with a valid thumbnail
+            const postWithThumbnail = posts.find((p: any) => p.thumbnailUrl);
+            const firstPostThumbnail = postWithThumbnail?.thumbnailUrl || null;
             return {
               ...collection,
               itemCount: posts.length,
