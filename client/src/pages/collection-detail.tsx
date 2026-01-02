@@ -2,7 +2,7 @@ import { useRoute } from 'wouter';
 import { TabBar } from '@/components/TabBar';
 import { PostCard } from '@/components/PostCard';
 import { PlaceCard } from '@/components/PlaceCard';
-import { MapPlaceholder } from '@/components/MapPlaceholder';
+import { CollectionMap } from '@/components/CollectionMap';
 import { ChevronLeft, Share2, Map, Grid, List, MoreHorizontal, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useState } from 'react';
@@ -161,8 +161,8 @@ export default function CollectionDetail() {
         )}
 
         {activeTab === 'map' && (
-           <div className="h-[400px]">
-             <MapPlaceholder places={places} />
+           <div className="h-[500px]">
+             <CollectionMap places={places} />
            </div>
         )}
       </div>
