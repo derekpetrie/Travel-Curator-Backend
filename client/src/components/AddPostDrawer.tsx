@@ -1,12 +1,12 @@
 import { Drawer } from 'vaul';
-import { PlusSquare, Link as LinkIcon, Check, Loader2, FolderPlus, Folder, AlertCircle, Sparkles, ImagePlus, Palette, X } from 'lucide-react';
+import { PlusSquare, Link as LinkIcon, Check, Loader2, FolderPlus, Folder, AlertCircle, ImagePlus, Palette, X } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCollections, addPost, createCollection, updateCollectionCover } from '@/lib/api';
 
 type TabType = 'existing' | 'new';
-type CoverType = 'ai' | 'upload' | 'gradient';
+type CoverType = 'upload' | 'gradient';
 
 const PRESET_GRADIENTS = [
   { name: 'Coral', from: '#FF385C', to: '#FF6B8A' },
@@ -30,7 +30,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
   const [manualCaption, setManualCaption] = useState('');
   const [needsManualCaption, setNeedsManualCaption] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [coverType, setCoverType] = useState<CoverType>('ai');
+  const [coverType, setCoverType] = useState<CoverType>('gradient');
   const [selectedGradient, setSelectedGradient] = useState<string>(`${PRESET_GRADIENTS[0].from}, ${PRESET_GRADIENTS[0].to}`);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -72,13 +72,12 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
     mutationFn: async () => {
       const collection = await createCollection(newCollectionName);
       
-      // If not using AI-generated cover, update with custom cover
+      // Set the cover based on user selection
       if (coverType === 'gradient') {
         await updateCollectionCover(collection.id, null, selectedGradient);
       } else if (coverType === 'upload' && uploadedImageUrl) {
         await updateCollectionCover(collection.id, uploadedImageUrl, null);
       }
-      // AI cover is generated automatically by createCollection
       
       await addPost(collection.id, url, needsManualCaption ? manualCaption : undefined);
       return collection;
@@ -113,7 +112,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
     setNeedsManualCaption(false);
     setErrorMessage('');
     setActiveTab('new');
-    setCoverType('ai');
+    setCoverType('gradient');
     setSelectedGradient(`${PRESET_GRADIENTS[0].from}, ${PRESET_GRADIENTS[0].to}`);
     setUploadedImageUrl(null);
   };
@@ -313,20 +312,6 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => setCoverType('ai')}
-                            data-testid="cover-type-ai"
-                            className={cn(
-                              "flex-1 py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all border",
-                              coverType === 'ai'
-                                ? "bg-primary text-white border-primary"
-                                : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
-                            )}
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            AI Generated
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => setCoverType('upload')}
                             data-testid="cover-type-upload"
                             className={cn(
@@ -355,12 +340,6 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                           </button>
                         </div>
                       </div>
-
-                      {coverType === 'ai' && (
-                        <p className="text-xs text-muted-foreground ml-1">
-                          A beautiful thumbnail will be generated based on your Venturr name.
-                        </p>
-                      )}
 
                       {coverType === 'upload' && (
                         <div className="space-y-2">
