@@ -60,12 +60,51 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - `POST /api/collections/:id/posts` - Add post (triggers AI extraction)
 - `GET /api/collections/:id/places` - Get places in Venturr
 
-## User Preferences
-- Design: Modern iOS-style with coral primary color (#FF385C)
-- Typography: Outfit for headings, Inter for body text
-- Corners: 0.5rem/8px rounded (not overly bubbly)
+## Venturr Design System v1.0
+
+### Brand Personality
+Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion + maps, not Expedia or TikTok.
+
+### Color Palette
+```css
+/* Primary */
+--coral-500: #F25F5C;      /* Primary CTAs, brand accent */
+
+/* Gunmetal - Text hierarchy */
+--gunmetal-900: #1F2933;   /* Headlines, primary text */
+--gunmetal-700: #3A4753;   /* Secondary text */
+--gunmetal-500: #6B7280;   /* Metadata, icons */
+
+/* Neutrals - Layout */
+--neutral-50: #F8FAFC;     /* App background */
+--neutral-0: #FFFFFF;      /* Cards */
+--neutral-200: #E2E8F0;    /* Borders */
+
+/* Semantic */
+--success: #4CAF93;
+--warning: #F4B740;
+--info: #4C82F7;
+```
+
+### Typography
+- Font: Inter (system fallback: -apple-system, SF Pro)
+- Headings: 600 weight
+- Body: 400 weight
+- No emojis in core UI
+
+### Spacing & Radius
+- radius-md: 14px (primary cards)
+- radius-lg: 18px (large cards)
+- shadow-sm: 0 4px 14px rgba(31,41,51,0.08)
+
+### Design Guidelines
+- Coral guides attention (CTAs, active states, highlights)
+- Never use coral for body text
+- Cards are the core metaphor (white on neutral background)
+- Be transparent about AI (label AI-suggested content)
 
 ## Recent Changes
+- 2026-01-02: Applied Venturr Design System v1.0 (new color palette, typography, app icon)
 - 2026-01-02: Renamed Search to Explore with map view showing all saved places
 - 2026-01-02: Added /api/places endpoint for fetching all user places across Venturrs
 - 2026-01-02: Added Explore tab to mobile app with place list and filters

@@ -24,81 +24,93 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   
-  --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  /* Venturr Design System v1.0 */
+  --font-sans: 'Inter', -apple-system, SF Pro, system-ui, sans-serif;
   
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
   
-  --animate-in: fade-in 0.2s ease-out;
-  --animate-out: fade-out 0.2s ease-in;
-  --animate-slide-in-from-bottom: slide-in-from-bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-slide-in-from-right: slide-in-from-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-sm: 0 4px 14px rgba(31,41,51,0.08);
+  
+  --animate-in: fade-in 0.25s ease-in-out;
+  --animate-out: fade-out 0.25s ease-in-out;
+  --animate-slide-in-from-bottom: slide-in-from-bottom 0.3s ease-in-out;
+  --animate-slide-in-from-right: slide-in-from-right 0.3s ease-in-out;
 }
 
 :root {
-  /* Clean, iOS-inspired Light Mode */
-  --background: 210 20% 98%; /* Soft cool grey/white */
-  --foreground: 222 47% 11%;
+  /* Venturr Design System v1.0 - Light Mode */
+  --background: 210 40% 98%; /* Neutral 50 #F8FAFC */
+  --foreground: 208 26% 16%; /* Gunmetal 900 #1F2933 */
   
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card: 0 0% 100%; /* Neutral 0 #FFFFFF */
+  --card-foreground: 208 26% 16%; /* Gunmetal 900 */
   
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 208 26% 16%;
   
-  --primary: 346 84% 61%; /* Coral - Vibrant Travel Color */
-  --primary-foreground: 210 40% 98%;
+  --primary: 1 86% 66%; /* Coral 500 #F25F5C */
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222 47% 11.2%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 208 26% 16%;
   
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 220 8% 46%; /* Gunmetal 500 #6B7280 */
   
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222 47% 11.2%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 208 26% 16%;
   
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
 
-  --border: 214 32% 91%;
+  --border: 214 32% 91%; /* Neutral 200 #E2E8F0 */
   --input: 214 32% 91%;
-  --ring: 346 84% 61%;
+  --ring: 1 86% 66%; /* Coral 500 */
   
-  --radius: 0.5rem;
+  /* Semantic colors */
+  --success: 158 54% 49%; /* #4CAF93 */
+  --warning: 42 90% 60%; /* #F4B740 */
+  --info: 220 92% 63%; /* #4C82F7 */
+  
+  --radius: 14px;
 }
 
 .dark {
-  /* Deep Modern Dark Mode */
-  --background: 222 47% 11%;
+  /* Venturr Design System v1.0 - Dark Mode */
+  --background: 208 26% 12%; /* Dark gunmetal */
   --foreground: 210 40% 98%;
   
-  --card: 222 47% 13%; /* Slightly lighter than bg */
+  --card: 208 26% 16%; /* Gunmetal 900 */
   --card-foreground: 210 40% 98%;
   
-  --popover: 222 47% 11%;
+  --popover: 208 26% 14%;
   --popover-foreground: 210 40% 98%;
   
-  --primary: 346 84% 61%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 1 86% 66%; /* Coral 500 */
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 217 32% 17%;
+  --secondary: 208 20% 20%;
   --secondary-foreground: 210 40% 98%;
   
-  --muted: 217 32% 17%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 208 20% 20%;
+  --muted-foreground: 220 8% 60%;
   
-  --accent: 217 32% 17%;
+  --accent: 208 20% 20%;
   --accent-foreground: 210 40% 98%;
   
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
   
-  --border: 217 32% 17%;
-  --input: 217 32% 17%;
-  --ring: 346 84% 61%;
+  --border: 208 20% 22%;
+  --input: 208 20% 22%;
+  --ring: 1 86% 66%; /* Coral 500 */
+  
+  /* Semantic colors */
+  --success: 158 54% 49%;
+  --warning: 42 90% 60%;
+  --info: 220 92% 63%;
 }
 
 @layer base {
