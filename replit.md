@@ -35,10 +35,22 @@ shared/                 # Shared types and schemas
 └── models/             # Additional models
 ```
 
+## Naming Convention (Important for Developers)
+The app uses **"Venturr"** as the user-facing brand name, but the backend uses **"collection"** internally:
+
+| User sees | Code/API uses |
+|-----------|---------------|
+| Venturr | collection |
+| Venturrs | collections |
+| My Venturrs | /api/collections |
+
+This is intentional to avoid database migrations. When working on the codebase:
+- **Frontend components**: Use "Venturr" (VenturrCard, VenturrMap, etc.)
+- **Backend/API/Database**: Use "collection" (collections table, /api/collections routes)
+- **Types**: The `Collection` type from schema.ts represents a Venturr
+
 ## API Endpoints
 All endpoints require authentication (except /api/login, /api/logout, /api/callback)
-
-Note: API routes use "collections" internally, but UI displays "Venturrs"
 
 - `GET /api/collections` - List user's Venturrs
 - `POST /api/collections` - Create new Venturr
