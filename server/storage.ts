@@ -12,7 +12,7 @@ export interface IStorage {
   getCollections(userId: string): Promise<Collection[]>;
   getCollection(id: number, userId: string): Promise<Collection | undefined>;
   createCollection(collection: InsertCollection): Promise<Collection>;
-  updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverGradient?: string | null }): Promise<Collection | undefined>;
+  updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
   updateCollectionThumbnail(id: number, userId: string, coverImage: string | null, coverGradient: string | null): Promise<void>;
   deleteCollection(id: number, userId: string): Promise<void>;
   
@@ -51,7 +51,7 @@ export class DatabaseStorage implements IStorage {
   async updateCollection(
     id: number,
     userId: string,
-    updates: { title?: string; coverImage?: string | null; coverGradient?: string | null }
+    updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }
   ): Promise<Collection | undefined> {
     const result = await db.update(collections)
       .set(updates)

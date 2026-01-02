@@ -4,12 +4,12 @@ import { PostCard } from '@/components/PostCard';
 import { PlaceCard } from '@/components/PlaceCard';
 import { CollectionMap } from '@/components/CollectionMap';
 import { CoverCustomizer } from '@/components/CoverCustomizer';
-import { ChevronLeft, Share2, Map, Grid, List, ImagePlus, Loader2 } from 'lucide-react';
+import { ChevronLeft, Share2, Map, Grid, List, ImagePlus, Loader2, Sparkles } from 'lucide-react';
 import { Link } from 'wouter';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover } from '@/lib/api';
+import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover, generateSummary } from '@/lib/api';
 
 export default function CollectionDetail() {
   const [, params] = useRoute('/collection/:id');
@@ -41,6 +41,20 @@ export default function CollectionDetail() {
     queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
     queryClient.invalidateQueries({ queryKey: ['collections'] });
   };
+
+  const summaryMutation = useMutation({
+    mutationFn: () => generateSummary(collectionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+    },
+  });
+
+  // Auto-generate summary if there are places but no summary
+  useEffect(() => {
+    if (collection && !collection.summary && places.length > 0 && !summaryMutation.isPending) {
+      summaryMutation.mutate();
+    }
+  }, [collection?.id, places.length]);
 
   if (collectionLoading) {
     return (
@@ -109,12 +123,26 @@ export default function CollectionDetail() {
              <p className="text-muted-foreground text-sm font-medium" data-testid="text-collection-info">
                {posts.length + places.length} items • Created on {createdAt}
              </p>
+             {(collection.summary || summaryMutation.isPending) && (
+               <div className="mt-3 pt-3 border-t border-border/50">
+                 {summaryMutation.isPending ? (
+                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                     <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                     <span>Generating itinerary...</span>
+                   </div>
+                 ) : (
+                   <p className="text-sm text-foreground/80 italic" data-testid="text-collection-summary">
+                     {collection.summary}
+                   </p>
+                 )}
+               </div>
+             )}
            </div>
         </div>
       </div>
 
       {/* Spacer for the floating title card */}
-      <div className="h-16" />
+      <div className={cn("transition-all", collection.summary || summaryMutation.isPending ? "h-24" : "h-16")} />
 
       {/* Tabs */}
       <div className="px-6 mt-4 mb-6">

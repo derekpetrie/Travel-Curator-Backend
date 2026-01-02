@@ -11,6 +11,7 @@ export const collections = pgTable("collections", {
   title: text("title").notNull(),
   coverImage: text("cover_image"),
   coverGradient: text("cover_gradient"),
+  summary: text("summary"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 

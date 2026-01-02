@@ -100,3 +100,11 @@ export async function updateCollectionCover(
   if (!response.ok) throw new Error('Failed to update collection cover');
   return response.json();
 }
+
+export async function generateSummary(id: number): Promise<{ summary: string | null }> {
+  const response = await fetch(`${API_BASE}/collections/${id}/summary`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to generate summary');
+  return response.json();
+}

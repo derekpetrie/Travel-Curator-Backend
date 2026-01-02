@@ -173,6 +173,47 @@ export async function registerRoutes(
     }
   });
 
+  // Generate/refresh collection summary
+  app.post("/api/collections/:id/summary", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      const collection = await storage.getCollection(id, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+
+      // Get all places in the collection
+      const places = await storage.getPlaces(id);
+      
+      if (places.length === 0) {
+        return res.json({ summary: null, message: "No places to summarize" });
+      }
+
+      // Generate a very brief summary
+      const placeNames = places.map(p => `${p.name}${p.city ? `, ${p.city}` : ''}${p.country ? ` (${p.country})` : ''}`);
+      
+      const prompt = `You are a travel guide. Create a VERY brief (max 15 words) itinerary summary for visiting these places: ${placeNames.join('; ')}. Be casual and inspiring. No emojis. Just one short sentence.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 50,
+      });
+
+      const summary = response.choices[0]?.message?.content?.trim() || null;
+      
+      // Save the summary
+      await storage.updateCollection(id, userId, { summary });
+
+      res.json({ summary });
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      res.status(500).json({ error: "Failed to generate summary" });
+    }
+  });
+
   // Posts - protected routes
   app.get("/api/collections/:collectionId/posts", isAuthenticated, async (req, res) => {
     try {
