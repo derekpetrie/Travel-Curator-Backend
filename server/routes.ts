@@ -468,41 +468,46 @@ Return your response as a JSON array of objects with keys: name, city, country, 
   }
 }
 
-// Geocode a place name to get coordinates (using a free service or Google Maps)
 async function geocodePlace(
   name: string,
   city: string | null,
   country: string | null
 ): Promise<{ lat: number; lng: number } | null> {
-  try {
-    // Build search query
-    const query = [name, city, country].filter(Boolean).join(", ");
-    
-    // Using Nominatim (OpenStreetMap) - free geocoding service
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-    
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Venturr/1.0",
-      },
-    });
+  const queries = [
+    [name, city, country].filter(Boolean).join(", "),
+    [name, city].filter(Boolean).join(", "),
+    [name, country].filter(Boolean).join(", "),
+    name,
+  ];
 
-    if (!response.ok) {
-      throw new Error(`Geocoding failed: ${response.statusText}`);
+  for (const query of queries) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+      
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Venturr/1.0 (travel-collection-app)",
+        },
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      
+      if (data.length > 0) {
+        console.log(`[Geocoding] Found "${name}" with query: "${query}"`);
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+    } catch (error) {
+      console.error(`[Geocoding] Error with query "${query}":`, error);
     }
-
-    const data = await response.json();
-    
-    if (data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error geocoding place:", error);
-    return null;
   }
+
+  console.log(`[Geocoding] Could not find coordinates for "${name}"`);
+  return null;
 }
