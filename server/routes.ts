@@ -470,7 +470,7 @@ export async function registerRoutes(
   return httpServer;
 }
 
-// Fetch metadata from TikTok or Instagram using oEmbed
+// Fetch metadata from TikTok or Instagram using Iframely API
 async function fetchMetadata(url: string): Promise<{
   source: string;
   thumbnailUrl: string | null;
@@ -494,11 +494,7 @@ async function fetchMetadata(url: string): Promise<{
   }
 
   try {
-    if (source === "tiktok") {
-      return await fetchTikTokMetadata(url);
-    } else {
-      return await fetchInstagramMetadata(url);
-    }
+    return await fetchIframelyMetadata(url, source);
   } catch (error) {
     console.error(`Error fetching ${source} metadata:`, error);
     return {
@@ -512,8 +508,8 @@ async function fetchMetadata(url: string): Promise<{
   }
 }
 
-// Fetch TikTok metadata using their public oEmbed API
-async function fetchTikTokMetadata(url: string): Promise<{
+// Fetch metadata using Iframely API (works for both TikTok and Instagram)
+async function fetchIframelyMetadata(url: string, source: string): Promise<{
   source: string;
   thumbnailUrl: string | null;
   caption: string | null;
@@ -521,69 +517,25 @@ async function fetchTikTokMetadata(url: string): Promise<{
   raw: any;
   error?: string;
 }> {
-  const oEmbedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
-  
-  console.log("[oEmbed] Fetching TikTok metadata...");
-  
-  const response = await fetch(oEmbedUrl, {
-    headers: {
-      "User-Agent": "Venturr/1.0",
-      "Accept": "application/json",
-    },
-  });
+  const apiKey = process.env.IFRAMELY_API_KEY;
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "Unknown error");
-    console.error(`[oEmbed] TikTok failed (${response.status}):`, errorText);
-    throw new Error(`TikTok oEmbed failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log("[oEmbed] TikTok metadata fetched successfully:", {
-    title: data.title?.substring(0, 50),
-    author: data.author_name,
-    hasThumbnail: !!data.thumbnail_url,
-  });
-
-  return {
-    source: "tiktok",
-    thumbnailUrl: data.thumbnail_url || null,
-    caption: data.title || null,
-    author: data.author_name || null,
-    raw: data,
-  };
-}
-
-// Fetch Instagram metadata using Meta's Graph API oEmbed
-async function fetchInstagramMetadata(url: string): Promise<{
-  source: string;
-  thumbnailUrl: string | null;
-  caption: string | null;
-  author: string | null;
-  raw: any;
-  error?: string;
-}> {
-  const appId = process.env.INSTAGRAM_APP_ID;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET;
-
-  if (!appId || !appSecret) {
-    console.warn("[oEmbed] Instagram credentials not configured");
+  if (!apiKey) {
+    console.warn("[Iframely] API key not configured");
     return {
-      source: "instagram",
+      source,
       thumbnailUrl: null,
       caption: null,
       author: null,
       raw: {},
-      error: "Instagram integration not configured. Please add INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.",
+      error: "Iframely integration not configured. Please add IFRAMELY_API_KEY.",
     };
   }
 
-  const accessToken = `${appId}|${appSecret}`;
-  const oEmbedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=${accessToken}`;
+  const iframelyUrl = `https://iframe.ly/api/oembed?url=${encodeURIComponent(url)}&api_key=${apiKey}`;
   
-  console.log("[oEmbed] Fetching Instagram metadata...");
+  console.log(`[Iframely] Fetching ${source} metadata...`);
 
-  const response = await fetch(oEmbedUrl, {
+  const response = await fetch(iframelyUrl, {
     headers: {
       "Accept": "application/json",
     },
@@ -591,24 +543,19 @@ async function fetchInstagramMetadata(url: string): Promise<{
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    console.error(`[oEmbed] Instagram failed (${response.status}):`, errorData);
-    
-    if (response.status === 400 && errorData.error?.message?.includes("Invalid access token")) {
-      throw new Error("Invalid Instagram credentials. Please check your app configuration.");
-    }
-    
-    throw new Error(`Instagram oEmbed failed: ${response.status}`);
+    console.error(`[Iframely] Failed (${response.status}):`, errorData);
+    throw new Error(`Iframely API failed: ${response.status}`);
   }
 
   const data = await response.json();
-  console.log("[oEmbed] Instagram metadata fetched successfully:", {
+  console.log(`[Iframely] ${source} metadata fetched successfully:`, {
     title: data.title?.substring(0, 50),
     author: data.author_name,
     hasThumbnail: !!data.thumbnail_url,
   });
 
   return {
-    source: "instagram",
+    source,
     thumbnailUrl: data.thumbnail_url || null,
     caption: data.title || null,
     author: data.author_name || null,
