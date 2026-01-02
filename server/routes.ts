@@ -663,17 +663,35 @@ async function geocodePlace(
     }
   }
 
+  // Helper to check if result matches expected location
+  const resultMatchesLocation = (displayName: string): boolean => {
+    const lowerDisplay = displayName.toLowerCase();
+    // Must match city if provided
+    if (city && !lowerDisplay.includes(city.toLowerCase())) {
+      return false;
+    }
+    // Must match country if provided
+    if (country && !lowerDisplay.includes(country.toLowerCase())) {
+      // Also check common country abbreviations
+      const countryAbbrevs: Record<string, string[]> = {
+        'united kingdom': ['uk', 'england', 'scotland', 'wales', 'britain'],
+        'united states': ['usa', 'us', 'america'],
+        'united arab emirates': ['uae'],
+      };
+      const abbrevs = countryAbbrevs[country.toLowerCase()] || [];
+      if (!abbrevs.some(abbrev => lowerDisplay.includes(abbrev))) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const queries = [
-    // Full queries with location context
+    // Full queries with location context (prioritize these)
     [name, city, country].filter(Boolean).join(", "),
+    [strippedName, city, country].filter(Boolean).join(", "),
     [name, country].filter(Boolean).join(", "),
     [strippedName, country].filter(Boolean).join(", "),
-    // Just the name variations
-    name,
-    strippedName,
-    // Try with country in different format
-    country ? `${name} ${country}` : null,
-    country ? `${strippedName} ${country}` : null,
   ].filter(Boolean) as string[];
 
   // Remove duplicates
@@ -683,7 +701,8 @@ async function geocodePlace(
     try {
       await new Promise(resolve => setTimeout(resolve, 250));
       
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+      // Use limit=5 to get multiple results we can filter
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`;
       
       const response = await fetch(url, {
         headers: {
@@ -695,15 +714,51 @@ async function geocodePlace(
 
       const data = await response.json();
       
+      // Find the first result that matches our expected location
+      for (const result of data) {
+        if (resultMatchesLocation(result.display_name)) {
+          console.log(`[Geocoding] Found "${name}" with query: "${query}" -> ${result.lat}, ${result.lon} (${result.display_name})`);
+          return {
+            lat: parseFloat(result.lat),
+            lng: parseFloat(result.lon),
+          };
+        }
+      }
+      
+      // If no results matched the location, log it
       if (data.length > 0) {
-        console.log(`[Geocoding] Found "${name}" with query: "${query}" -> ${data[0].lat}, ${data[0].lon}`);
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
+        console.log(`[Geocoding] Found ${data.length} results for "${query}" but none matched expected location (city: ${city}, country: ${country})`);
       }
     } catch (error) {
       console.error(`[Geocoding] Error with query "${query}":`, error);
+    }
+  }
+
+  // Fallback: Try geocoding just the city if we have one
+  if (city && country) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const cityQuery = `${city}, ${country}`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityQuery)}&format=json&limit=1`;
+      
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Venturr/1.0 (travel-collection-app)",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.length > 0) {
+          console.log(`[Geocoding] Falling back to city center for "${name}": ${city}, ${country} -> ${data[0].lat}, ${data[0].lon}`);
+          return {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+          };
+        }
+      }
+    } catch (error) {
+      console.error(`[Geocoding] City fallback error:`, error);
     }
   }
 
