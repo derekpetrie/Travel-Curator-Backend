@@ -26,6 +26,7 @@ export interface IStorage {
   // Places
   getPlaces(collectionId: number): Promise<Place[]>;
   getAllPlaces(): Promise<Place[]>;
+  getPlacesByUser(userId: string): Promise<Place[]>;
   getPlace(id: number): Promise<Place | undefined>;
   createPlace(place: InsertPlace): Promise<Place>;
   updatePlaceCategory(id: number, category: string): Promise<void>;
@@ -129,6 +130,24 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPlaces(): Promise<Place[]> {
     return await db.select().from(places).orderBy(desc(places.createdAt));
+  }
+
+  async getPlacesByUser(userId: string): Promise<Place[]> {
+    return await db.select({
+      id: places.id,
+      collectionId: places.collectionId,
+      name: places.name,
+      city: places.city,
+      country: places.country,
+      category: places.category,
+      lat: places.lat,
+      lng: places.lng,
+      confidence: places.confidence,
+      createdAt: places.createdAt,
+    }).from(places)
+      .innerJoin(collections, eq(places.collectionId, collections.id))
+      .where(eq(collections.userId, userId))
+      .orderBy(desc(places.createdAt));
   }
 
   async updatePlaceCategory(id: number, category: string): Promise<void> {

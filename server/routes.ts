@@ -381,6 +381,19 @@ export async function registerRoutes(
   });
 
   // Places - protected routes
+  
+  // Get all places for the user (across all collections)
+  app.get("/api/places", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const places = await storage.getPlacesByUser(userId);
+      res.json(places);
+    } catch (error) {
+      console.error("Error fetching all places:", error);
+      res.status(500).json({ error: "Failed to fetch places" });
+    }
+  });
+
   app.get("/api/collections/:collectionId/places", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);
