@@ -512,16 +512,35 @@ async function geocodePlace(
   city: string | null,
   country: string | null
 ): Promise<{ lat: number; lng: number } | null> {
-  const queries = [
-    [name, city, country].filter(Boolean).join(", "),
-    [name, city].filter(Boolean).join(", "),
-    [name, country].filter(Boolean).join(", "),
-    name,
-  ];
+  // Strip common prefixes that OSM might not use
+  const prefixes = ['Lake ', 'Mount ', 'Mt. ', 'Mt ', 'Beach ', 'Castle ', 'Temple ', 'Shrine ', 'The ', 'Restaurant ', 'Cafe ', 'Hotel '];
+  let strippedName = name;
+  for (const prefix of prefixes) {
+    if (name.startsWith(prefix)) {
+      strippedName = name.slice(prefix.length);
+      break;
+    }
+  }
 
-  for (const query of queries) {
+  const queries = [
+    // Full queries with location context
+    [name, city, country].filter(Boolean).join(", "),
+    [name, country].filter(Boolean).join(", "),
+    [strippedName, country].filter(Boolean).join(", "),
+    // Just the name variations
+    name,
+    strippedName,
+    // Try with country in different format
+    country ? `${name} ${country}` : null,
+    country ? `${strippedName} ${country}` : null,
+  ].filter(Boolean) as string[];
+
+  // Remove duplicates
+  const uniqueQueries = Array.from(new Set(queries));
+
+  for (const query of uniqueQueries) {
     try {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 250));
       
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
       
@@ -536,7 +555,7 @@ async function geocodePlace(
       const data = await response.json();
       
       if (data.length > 0) {
-        console.log(`[Geocoding] Found "${name}" with query: "${query}"`);
+        console.log(`[Geocoding] Found "${name}" with query: "${query}" -> ${data[0].lat}, ${data[0].lon}`);
         return {
           lat: parseFloat(data[0].lat),
           lng: parseFloat(data[0].lon),
@@ -547,6 +566,6 @@ async function geocodePlace(
     }
   }
 
-  console.log(`[Geocoding] Could not find coordinates for "${name}"`);
+  console.log(`[Geocoding] Could not find coordinates for "${name}" after trying ${uniqueQueries.length} queries`);
   return null;
 }
