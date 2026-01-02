@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 export default function Search() {
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'places' | 'collections'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'places' | 'venturrs'>('all');
 
   // Simple mock filtering
   const filteredCollections = MOCK_COLLECTIONS.filter(c => 
@@ -28,7 +28,7 @@ export default function Search() {
           <SearchIcon className="absolute left-3.5 top-3.5 w-5 h-5 text-muted-foreground" />
           <input 
             type="text" 
-            placeholder="Search places, collections..." 
+            placeholder="Search places, venturrs..." 
             className="w-full h-12 pl-11 pr-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none font-medium text-foreground placeholder:text-muted-foreground/70"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -38,7 +38,7 @@ export default function Search() {
 
         {/* Filter Chips */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-          {['all', 'places', 'collections'].map((filter) => (
+          {['all', 'places', 'venturrs'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter as any)}
@@ -78,14 +78,14 @@ export default function Search() {
         ) : (
           /* Search Results */
           <div className="space-y-6">
-            {/* Collections Result Section */}
-            {(activeFilter === 'all' || activeFilter === 'collections') && (
+            {/* Venturrs Result Section */}
+            {(activeFilter === 'all' || activeFilter === 'venturrs') && (
                <div>
-                  <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Collections</h3>
+                  <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Venturrs</h3>
                   {filteredCollections.length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
                       {filteredCollections.map(collection => (
-                         <Link key={collection.id} href={`/collection/${collection.id}`}>
+                         <Link key={collection.id} href={`/venturr/${collection.id}`}>
                            <a className="group block bg-card rounded-lg overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
                              <div className="aspect-square relative">
                                <img src={collection.thumbnail} className="w-full h-full object-cover" alt="" />
@@ -100,7 +100,7 @@ export default function Search() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">No collections found.</p>
+                    <p className="text-sm text-muted-foreground italic">No venturrs found.</p>
                   )}
                </div>
             )}

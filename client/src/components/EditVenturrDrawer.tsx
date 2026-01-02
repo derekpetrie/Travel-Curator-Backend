@@ -4,10 +4,10 @@ import { X, Loader2, ImagePlus } from 'lucide-react';
 import { CoverCustomizer } from './CoverCustomizer';
 import type { Collection } from '@shared/schema';
 
-interface EditCollectionDrawerProps {
+interface EditVenturrDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  collection: Collection;
+  venturr: Collection;
   currentCoverImage: string | null;
   currentCoverGradient: string;
   onSaveTitle: (title: string) => Promise<void>;
@@ -15,32 +15,32 @@ interface EditCollectionDrawerProps {
   isSaving?: boolean;
 }
 
-export function EditCollectionDrawer({
+export function EditVenturrDrawer({
   open,
   onOpenChange,
-  collection,
+  venturr,
   currentCoverImage,
   currentCoverGradient,
   onSaveTitle,
   onSaveCover,
   isSaving = false,
-}: EditCollectionDrawerProps) {
-  const [title, setTitle] = useState(collection.title);
+}: EditVenturrDrawerProps) {
+  const [title, setTitle] = useState(venturr.title);
   const [showCoverCustomizer, setShowCoverCustomizer] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setTitle(collection.title);
+      setTitle(venturr.title);
     }
-  }, [open, collection.title]);
+  }, [open, venturr.title]);
 
   const handleSave = async () => {
     if (!title.trim()) return;
     
     setSaving(true);
     try {
-      if (title.trim() !== collection.title) {
+      if (title.trim() !== venturr.title) {
         await onSaveTitle(title.trim());
       }
       onOpenChange(false);
@@ -65,7 +65,7 @@ export function EditCollectionDrawer({
             <div className="px-6 pb-8 max-h-[85vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <Drawer.Title className="font-heading text-xl font-bold">
-                  Edit Collection
+                  Edit Venturr
                 </Drawer.Title>
                 <button
                   onClick={() => onOpenChange(false)}
@@ -79,13 +79,13 @@ export function EditCollectionDrawer({
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Collection Name
+                    Venturr Name
                   </label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter collection name"
+                    placeholder="Enter Venturr name"
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-medium"
                     data-testid="input-edit-title"
                   />
@@ -133,7 +133,7 @@ export function EditCollectionDrawer({
                   onClick={handleSave}
                   disabled={saving || isSaving || !title.trim()}
                   className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  data-testid="button-save-collection"
+                  data-testid="button-save-venturr"
                 >
                   {(saving || isSaving) && <Loader2 className="w-4 h-4 animate-spin" />}
                   Save Changes

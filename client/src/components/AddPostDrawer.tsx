@@ -188,7 +188,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
                   <PlusSquare className="w-8 h-8" />
                 </div>
-                <h2 className="font-heading text-2xl font-bold mb-2">Save to Collection</h2>
+                <h2 className="font-heading text-2xl font-bold mb-2">Save to Venturr</h2>
                 <p className="text-muted-foreground">Paste a TikTok or Instagram link to automatically extract travel spots.</p>
               </div>
 
@@ -199,7 +199,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                   </div>
                   <h3 className="font-heading text-xl font-bold text-foreground">Saved!</h3>
                   <p className="text-muted-foreground">
-                    {activeTab === 'new' ? 'Collection created and post added.' : 'Location extracted and added to collection.'}
+                    {activeTab === 'new' ? 'Venturr created and post added.' : 'Location extracted and added to Venturr.'}
                   </p>
                 </div>
               ) : isLoading ? (
@@ -257,18 +257,18 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
 
                   {activeTab === 'existing' ? (
                     <div className="space-y-2">
-                      <label className="text-sm font-medium ml-1">Select Collection</label>
+                      <label className="text-sm font-medium ml-1">Select Venturr</label>
                       <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto">
                         {collections.length === 0 ? (
                           <p className="text-center text-muted-foreground py-4">
-                            No collections yet. Create one first!
+                            No venturrs yet. Create one first!
                           </p>
                         ) : (
                           collections.map((collection: any) => (
                             <div 
                               key={collection.id}
                               onClick={() => setSelectedCollection(collection.id)}
-                              data-testid={`collection-option-${collection.id}`}
+                              data-testid={`venturr-option-${collection.id}`}
                               className={cn(
                                 "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                                 selectedCollection === collection.id 
@@ -296,7 +296,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                   ) : (
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium ml-1">Collection Name</label>
+                        <label className="text-sm font-medium ml-1">Venturr Name</label>
                         <input 
                           type="text" 
                           placeholder="e.g., Japan 2025, Bali Trip, Hidden Gems..." 
@@ -304,7 +304,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                           value={newCollectionName}
                           onChange={(e) => setNewCollectionName(e.target.value)}
                           required
-                          data-testid="input-collection-name"
+                          data-testid="input-venturr-name"
                         />
                       </div>
 
@@ -358,7 +358,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
 
                       {coverType === 'ai' && (
                         <p className="text-xs text-muted-foreground ml-1">
-                          A beautiful thumbnail will be generated based on your collection name.
+                          A beautiful thumbnail will be generated based on your Venturr name.
                         </p>
                       )}
 
@@ -475,7 +475,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                         {needsManualCaption ? 'Saving...' : (activeTab === 'new' ? 'Creating & Extracting...' : 'Extracting Places...')}
                       </>
                     ) : (
-                      needsManualCaption ? 'Save with Description' : (activeTab === 'new' ? 'Create Collection & Save' : 'Save to Collection')
+                      needsManualCaption ? 'Save with Description' : (activeTab === 'new' ? 'Create Venturr & Save' : 'Save to Venturr')
                     )}
                   </button>
                 </form>

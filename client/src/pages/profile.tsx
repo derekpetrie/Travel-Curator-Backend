@@ -34,8 +34,8 @@ export default function Profile() {
 
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-card p-4 rounded-xl border border-border text-center shadow-sm">
-            <div className="text-2xl font-bold text-primary mb-1" data-testid="text-collections-count">{collections.length}</div>
-            <div className="text-xs text-muted-foreground font-bold uppercase tracking-wide">Collections</div>
+            <div className="text-2xl font-bold text-primary mb-1" data-testid="text-venturrs-count">{collections.length}</div>
+            <div className="text-xs text-muted-foreground font-bold uppercase tracking-wide">Venturrs</div>
           </div>
           <div className="bg-card p-4 rounded-xl border border-border text-center shadow-sm">
             <div className="text-2xl font-bold text-primary mb-1">0</div>

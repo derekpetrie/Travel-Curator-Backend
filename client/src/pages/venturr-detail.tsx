@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover, generateSummary, renameCollection } from '@/lib/api';
 
-export default function CollectionDetail() {
-  const [, params] = useRoute('/collection/:id');
+export default function VenturrDetail() {
+  const [, params] = useRoute('/venturr/:id');
   const collectionId = parseInt(params?.id || '0');
   const [activeTab, setActiveTab] = useState<'posts' | 'places' | 'map'>('posts');
   const [showEditDrawer, setShowEditDrawer] = useState(false);
@@ -78,7 +78,7 @@ export default function CollectionDetail() {
   }
 
   if (!collection) {
-    return <div className="p-8 text-center">Collection not found</div>;
+    return <div className="p-8 text-center">Venturr not found</div>;
   }
 
   const coverImage = collection.coverImage;
@@ -126,8 +126,8 @@ export default function CollectionDetail() {
            <div className="bg-card shadow-xl rounded-xl p-5 border border-border/50">
              <div className="flex items-start justify-between gap-3">
                <div className="flex-1 min-w-0">
-                 <h1 className="font-heading text-2xl font-bold mb-1" data-testid="text-collection-title">{collection.title}</h1>
-                 <p className="text-muted-foreground text-sm font-medium" data-testid="text-collection-info">
+                 <h1 className="font-heading text-2xl font-bold mb-1" data-testid="text-venturr-title">{collection.title}</h1>
+                 <p className="text-muted-foreground text-sm font-medium" data-testid="text-venturr-info">
                    {posts.length} {posts.length === 1 ? 'post' : 'posts'} • {places.length} {places.length === 1 ? 'place' : 'places'} • {createdAt}
                  </p>
                </div>
@@ -135,7 +135,7 @@ export default function CollectionDetail() {
                  <button 
                    onClick={() => setShowEditDrawer(true)}
                    className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground" 
-                   data-testid="button-edit-collection"
+                   data-testid="button-edit-venturr"
                  >
                    <Pencil className="w-4 h-4" />
                  </button>
@@ -155,7 +155,7 @@ export default function CollectionDetail() {
                      <span>Generating itinerary...</span>
                    </div>
                  ) : (
-                   <p className="text-sm text-foreground/80 italic" data-testid="text-collection-summary">
+                   <p className="text-sm text-foreground/80 italic" data-testid="text-venturr-summary">
                      {collection.summary}
                    </p>
                  )}
@@ -236,17 +236,17 @@ export default function CollectionDetail() {
 
         {activeTab === 'map' && (
            <div className="h-[500px]">
-             <CollectionMap places={places} />
+             <VenturrMap places={places} />
            </div>
         )}
       </div>
 
       <TabBar />
 
-      <EditCollectionDrawer
+      <EditVenturrDrawer
         open={showEditDrawer}
         onOpenChange={setShowEditDrawer}
-        collection={collection}
+        venturr={collection}
         currentCoverImage={coverImage || null}
         currentCoverGradient={coverGradient}
         onSaveTitle={handleSaveTitle}

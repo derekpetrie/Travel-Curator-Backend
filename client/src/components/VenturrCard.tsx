@@ -6,8 +6,8 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renameCollection, deleteCollection } from '@/lib/api';
 
-interface CollectionCardProps {
-  collection: Collection & { itemCount?: number };
+interface VenturrCardProps {
+  venturr: Collection & { itemCount?: number };
 }
 
 function parseGradient(gradient: string | null | undefined): { from: string; to: string } {
@@ -19,16 +19,16 @@ function parseGradient(gradient: string | null | undefined): { from: string; to:
   return { from: parts[0] || '#FF385C', to: parts[1] || '#FF6B8A' };
 }
 
-export function CollectionCard({ collection }: CollectionCardProps) {
-  const gradient = parseGradient(collection.coverGradient);
+export function VenturrCard({ venturr }: VenturrCardProps) {
+  const gradient = parseGradient(venturr.coverGradient);
   const [showMenu, setShowMenu] = useState(false);
   const queryClient = useQueryClient();
 
   const renameMutation = useMutation({
     mutationFn: async () => {
-      const newTitle = prompt('Enter new name:', collection.title);
-      if (!newTitle || newTitle.trim() === collection.title) return null;
-      return renameCollection(collection.id, newTitle.trim());
+      const newTitle = prompt('Enter new name:', venturr.title);
+      if (!newTitle || newTitle.trim() === venturr.title) return null;
+      return renameCollection(venturr.id, newTitle.trim());
     },
     onSuccess: (result) => {
       if (result) {
@@ -40,8 +40,8 @@ export function CollectionCard({ collection }: CollectionCardProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (!confirm('Delete this collection?')) return null;
-      return deleteCollection(collection.id);
+      if (!confirm('Delete this Venturr?')) return null;
+      return deleteCollection(venturr.id);
     },
     onSuccess: (result) => {
       if (result !== null) {
@@ -59,11 +59,11 @@ export function CollectionCard({ collection }: CollectionCardProps) {
   
   return (
     <div className="relative">
-      <Link href={`/collection/${collection.id}`} className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-        {collection.coverImage ? (
+      <Link href={`/venturr/${venturr.id}`} className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+        {venturr.coverImage ? (
           <img 
-            src={collection.coverImage} 
-            alt={collection.title}
+            src={venturr.coverImage} 
+            alt={venturr.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
@@ -78,11 +78,11 @@ export function CollectionCard({ collection }: CollectionCardProps) {
         
         <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
           <h3 className="font-heading text-xl font-bold mb-1 line-clamp-2 leading-tight">
-            {collection.title}
+            {venturr.title}
           </h3>
           <div className="flex items-center justify-between">
             <span className="text-white/80 text-sm font-medium">
-              {collection.itemCount ?? 0} items
+              {venturr.itemCount ?? 0} items
             </span>
             <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <ArrowRight className="w-4 h-4 text-white" />
@@ -93,7 +93,7 @@ export function CollectionCard({ collection }: CollectionCardProps) {
 
       <button
         onClick={handleMenuClick}
-        data-testid={`button-menu-collection-${collection.id}`}
+        data-testid={`button-menu-venturr-${venturr.id}`}
         className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors z-10"
       >
         <MoreVertical className="w-4 h-4" />
@@ -111,7 +111,7 @@ export function CollectionCard({ collection }: CollectionCardProps) {
                 e.stopPropagation();
                 renameMutation.mutate();
               }}
-              data-testid={`button-rename-collection-${collection.id}`}
+              data-testid={`button-rename-venturr-${venturr.id}`}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100"
             >
               <Pencil className="w-4 h-4" />
@@ -122,7 +122,7 @@ export function CollectionCard({ collection }: CollectionCardProps) {
                 e.stopPropagation();
                 deleteMutation.mutate();
               }}
-              data-testid={`button-delete-collection-${collection.id}`}
+              data-testid={`button-delete-venturr-${venturr.id}`}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 text-red-600"
             >
               <Trash2 className="w-4 h-4" />

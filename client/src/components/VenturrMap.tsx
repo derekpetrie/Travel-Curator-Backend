@@ -6,11 +6,11 @@ import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 import type { Place } from '@shared/schema';
 
-interface CollectionMapProps {
+interface VenturrMapProps {
   places: Place[];
 }
 
-export function CollectionMap({ places }: CollectionMapProps) {
+export function VenturrMap({ places }: VenturrMapProps) {
   const mapRef = useRef<any>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);

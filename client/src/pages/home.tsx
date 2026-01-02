@@ -31,7 +31,7 @@ export default function Home() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const title = prompt('Enter collection name:');
+      const title = prompt('Enter Venturr name:');
       if (!title) return null;
       return createCollection(title);
     },
@@ -92,12 +92,12 @@ export default function Home() {
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1">Welcome back</p>
             <h1 className="font-heading text-3xl font-extrabold text-foreground tracking-tight">
-              My Collections
+              My Venturrs
             </h1>
           </div>
           <button 
             onClick={() => createMutation.mutate()}
-            data-testid="button-create-collection-header"
+            data-testid="button-create-venturr-header"
             className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"
           >
             {createMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
@@ -140,14 +140,14 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {sortedCollections.map((collection: any) => (
-              <CollectionCard key={collection.id} collection={collection} />
+            {sortedCollections.map((venturr: any) => (
+              <VenturrCard key={venturr.id} venturr={venturr} />
             ))}
             
             {/* Add New Place Holder */}
             <button 
               onClick={() => createMutation.mutate()}
-              data-testid="button-create-collection"
+              data-testid="button-create-venturr"
               className="aspect-[4/5] rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all group"
             >
               <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">

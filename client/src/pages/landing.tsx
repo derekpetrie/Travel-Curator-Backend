@@ -38,7 +38,7 @@ export default function Landing() {
             </div>
             <div>
               <h3 className="font-bold mb-1">Save posts</h3>
-              <p className="text-sm text-muted-foreground">Paste a TikTok or Instagram link to save it to a collection</p>
+              <p className="text-sm text-muted-foreground">Paste a TikTok or Instagram link to save it to a Venturr</p>
             </div>
           </div>
 
