@@ -56,7 +56,14 @@ export interface AddPostError {
   needsManualCaption?: boolean;
 }
 
-export async function addPost(collectionId: number, url: string, manualCaption?: string): Promise<{ post: Post; places: Place[] }> {
+export interface AddPostResult {
+  post: Post;
+  places: Place[];
+  extractionMethod: 'text' | 'vision' | null;
+  extractionWarning: string | null;
+}
+
+export async function addPost(collectionId: number, url: string, manualCaption?: string): Promise<AddPostResult> {
   const response = await fetch(`${API_BASE}/collections/${collectionId}/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

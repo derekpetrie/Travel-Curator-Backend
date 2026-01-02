@@ -274,14 +274,17 @@ export async function registerRoutes(
       // Use manual caption if provided (fallback when oEmbed fails)
       const captionToUse = metadata.caption || manualCaption || null;
       
+      // Infer source from URL if metadata failed
+      const source = metadata.source || (isTikTok ? "tiktok" : "instagram");
+      
       const postData = {
         collectionId,
-        source: metadata.source as "tiktok" | "instagram",
+        source: source as "tiktok" | "instagram",
         url: url,
-        thumbnailUrl: metadata.thumbnailUrl,
+        thumbnailUrl: metadata.thumbnailUrl || null,
         caption: captionToUse,
-        author: metadata.author,
-        metadataJson: metadata.raw,
+        author: metadata.author || null,
+        metadataJson: metadata.raw || {},
       };
 
       const parsed = insertPostSchema.parse(postData);
@@ -292,10 +295,35 @@ export async function registerRoutes(
 
       // Extract places from caption using LLM
       let places: any[] = [];
+      let extractedPlaces: any[] = [];
+      let extractionMethod: string | null = null;
+      let extractionWarning: string | null = null;
+      
+      // Step 1: Try text extraction from caption
       if (captionToUse) {
-        const extractedPlaces = await extractPlacesFromText(captionToUse);
-        
-        // Save places to database
+        extractedPlaces = await extractPlacesFromText(captionToUse);
+        if (extractedPlaces.length > 0) {
+          extractionMethod = 'text';
+        }
+      }
+      
+      // Step 2: If no places found and we have a thumbnail, try vision extraction
+      if (extractedPlaces.length === 0 && metadata.thumbnailUrl) {
+        console.log("[Extraction] No places from text, trying vision fallback...");
+        extractedPlaces = await extractPlacesFromImage(metadata.thumbnailUrl);
+        if (extractedPlaces.length > 0) {
+          extractionMethod = 'vision';
+        }
+      }
+      
+      // Step 3: If still no places, set warning message
+      if (extractedPlaces.length === 0) {
+        extractionWarning = "We couldn't identify specific locations from this post. The description and image didn't contain enough location details for us to extract places.";
+        console.log("[Extraction] No places found from text or vision");
+      }
+      
+      // Save places to database
+      if (extractedPlaces.length > 0) {
         places = await Promise.all(
           extractedPlaces.map(place => 
             storage.createPlace({
@@ -312,31 +340,29 @@ export async function registerRoutes(
         );
         
         // Regenerate summary in the background when new places are extracted
-        if (places.length > 0) {
-          const userId = getUserId(req);
-          // Fire-and-forget summary regeneration
-          (async () => {
-            try {
-              const allPlaces = await storage.getPlaces(collectionId);
-              if (allPlaces.length > 0) {
-                const placeNames = allPlaces.map(p => `${p.name}${p.city ? `, ${p.city}` : ''}${p.country ? ` (${p.country})` : ''}`);
-                const prompt = `You are a travel guide. Create a VERY brief (max 15 words) itinerary summary for visiting these places: ${placeNames.join('; ')}. Be casual and inspiring. No emojis. Just one short sentence.`;
-                const response = await openai.chat.completions.create({
-                  model: "gpt-4o-mini",
-                  messages: [{ role: "user", content: prompt }],
-                  max_tokens: 50,
-                });
-                const summary = response.choices[0]?.message?.content?.trim() || null;
-                await storage.updateCollection(collectionId, userId, { summary });
-              }
-            } catch (err) {
-              console.error("Error regenerating summary:", err);
+        const userId = getUserId(req);
+        // Fire-and-forget summary regeneration
+        (async () => {
+          try {
+            const allPlaces = await storage.getPlaces(collectionId);
+            if (allPlaces.length > 0) {
+              const placeNames = allPlaces.map(p => `${p.name}${p.city ? `, ${p.city}` : ''}${p.country ? ` (${p.country})` : ''}`);
+              const prompt = `You are a travel guide. Create a VERY brief (max 15 words) itinerary summary for visiting these places: ${placeNames.join('; ')}. Be casual and inspiring. No emojis. Just one short sentence.`;
+              const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [{ role: "user", content: prompt }],
+                max_tokens: 50,
+              });
+              const summary = response.choices[0]?.message?.content?.trim() || null;
+              await storage.updateCollection(collectionId, userId, { summary });
             }
-          })();
-        }
+          } catch (err) {
+            console.error("Error regenerating summary:", err);
+          }
+        })();
       }
 
-      res.json({ post, places });
+      res.json({ post, places, extractionMethod, extractionWarning });
     } catch (error) {
       console.error("Error creating post:", error);
       res.status(500).json({ error: "Failed to create post" });
@@ -575,6 +601,81 @@ async function fetchInstagramMetadata(url: string): Promise<{
     author: data.author_name || null,
     raw: data,
   };
+}
+
+// Extract places from image using GPT-4o vision
+async function extractPlacesFromImage(imageUrl: string): Promise<Array<{
+  name: string;
+  city: string | null;
+  country: string | null;
+  category: string | null;
+  lat: number | null;
+  lng: number | null;
+  confidence: number;
+}>> {
+  try {
+    console.log("[Vision] Analyzing thumbnail for places:", imageUrl);
+    
+    const prompt = `Analyze this travel image and identify any SPECIFIC, VISITABLE places shown or indicated.
+
+IMPORTANT RULES:
+1. Look for text overlays, location labels, or recognizable landmarks in the image
+2. Only identify places you can name specifically (not just "a temple" but "Senso-ji Temple")
+3. If you see famous landmarks, identify them by name
+4. If there's text showing location names, extract those
+5. Do NOT guess generic places - only identify what you can specifically recognize or read
+
+For each place you can identify, provide:
+- name: The specific venue/landmark name
+- city: The city (if you can determine it)
+- country: The country (if you can determine it)
+- category: One of: restaurant, cafe, bar, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, sports, entertainment, other
+- confidence: A score from 0 to 1 (use 0.7+ only for places you're certain about)
+
+Return your response as JSON with a "places" array. If you cannot identify any specific places, return {"places": []}.
+Do NOT make up places or guess - only return places you can specifically identify from the image.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
+          ],
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 1000,
+      response_format: { type: "json_object" },
+    });
+
+    const responseText = completion.choices[0].message.content || "{}";
+    console.log("[Vision] Raw response:", responseText);
+    
+    const parsed = JSON.parse(responseText);
+    const places = parsed.places || [];
+    
+    console.log(`[Vision] Found ${places.length} places from image analysis`);
+
+    // Geocode each place to get coordinates
+    const geocodedPlaces = await Promise.all(
+      places.map(async (place: any) => {
+        const coords = await geocodePlace(place.name, place.city, place.country);
+        return {
+          ...place,
+          lat: coords?.lat || null,
+          lng: coords?.lng || null,
+        };
+      })
+    );
+
+    return geocodedPlaces;
+  } catch (error) {
+    console.error("[Vision] Error extracting places from image:", error);
+    return [];
+  }
 }
 
 // Extract places from text using OpenAI

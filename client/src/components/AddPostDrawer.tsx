@@ -3,7 +3,8 @@ import { PlusSquare, Link as LinkIcon, Check, Loader2, FolderPlus, Folder, Alert
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollections, addPost, createCollection, updateCollectionCover } from '@/lib/api';
+import { fetchCollections, addPost, createCollection, updateCollectionCover, type AddPostResult } from '@/lib/api';
+import { toast } from 'sonner';
 
 type TabType = 'existing' | 'new';
 type CoverType = 'upload' | 'gradient';
@@ -59,11 +60,18 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       if (!selectedCollection) throw new Error('No collection selected');
       return addPost(selectedCollection, url, needsManualCaption ? manualCaption : undefined);
     },
-    onSuccess: () => {
+    onSuccess: (result: AddPostResult) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['places'] });
       showSuccessAndClose();
+      
+      // Show warning toast if no places were extracted
+      if (result.extractionWarning) {
+        setTimeout(() => {
+          toast.info(result.extractionWarning, { duration: 6000 });
+        }, 2100);
+      }
     },
     onError: handleMutationError,
   });
@@ -79,14 +87,21 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
         await updateCollectionCover(collection.id, uploadedImageUrl, null);
       }
       
-      await addPost(collection.id, url, needsManualCaption ? manualCaption : undefined);
-      return collection;
+      const postResult = await addPost(collection.id, url, needsManualCaption ? manualCaption : undefined);
+      return { collection, postResult };
     },
-    onSuccess: () => {
+    onSuccess: ({ postResult }) => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['places'] });
       showSuccessAndClose();
+      
+      // Show warning toast if no places were extracted
+      if (postResult.extractionWarning) {
+        setTimeout(() => {
+          toast.info(postResult.extractionWarning, { duration: 6000 });
+        }, 2100);
+      }
     },
     onError: handleMutationError,
   });
