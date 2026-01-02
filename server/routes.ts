@@ -526,7 +526,7 @@ async function extractPlacesFromText(text: string): Promise<Array<{
 - name: The name of the place
 - city: The city (if mentioned or can be inferred)
 - country: The country (if mentioned or can be inferred)
-- category: One of: restaurant, hotel, landmark, beach, park, museum, cafe, bar, attraction, other
+- category: One of: restaurant, cafe, bar, nightlife, hotel, beach, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, other
 - confidence: A score from 0 to 1 indicating how confident you are this is a real place
 
 Text: "${text}"
