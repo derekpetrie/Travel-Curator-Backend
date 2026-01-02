@@ -59,7 +59,7 @@ export function EditCollectionDrawer({
       <Drawer.Root open={open} onOpenChange={onOpenChange}>
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl outline-none">
+          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl outline-none" style={{ pointerEvents: showCoverCustomizer ? 'none' : 'auto' }}>
             <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted my-4" />
             
             <div className="px-6 pb-8 max-h-[85vh] overflow-y-auto">
