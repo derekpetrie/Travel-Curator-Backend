@@ -298,6 +298,12 @@ export async function registerRoutes(
             })
           )
         );
+        
+        // Clear the summary so it regenerates with new places
+        if (places.length > 0) {
+          const userId = getUserId(req);
+          await storage.updateCollection(collectionId, userId, { summary: null });
+        }
       }
 
       res.json({ post, places });
@@ -339,6 +345,15 @@ export async function registerRoutes(
   app.delete("/api/places/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      // Get the place to find its collection before deleting
+      const place = await storage.getPlace(id);
+      if (place) {
+        // Clear summary so it regenerates
+        await storage.updateCollection(place.collectionId, userId, { summary: null });
+      }
+      
       await storage.deletePlace(id);
       res.json({ success: true });
     } catch (error) {
