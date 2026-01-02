@@ -71,19 +71,21 @@ export async function registerRoutes(
       const parsed = insertCollectionSchema.parse({ ...req.body, userId });
       const collection = await storage.createCollection(parsed);
       
-      // Generate thumbnail in the background (don't block response)
-      generateCollectionThumbnail(parsed.title).then(async (thumbnail) => {
-        try {
-          await storage.updateCollectionThumbnail(
-            collection.id,
-            userId,
-            thumbnail.coverImage,
-            thumbnail.coverGradient
-          );
-        } catch (err) {
-          console.error("Error updating collection thumbnail:", err);
-        }
-      });
+      // Only generate thumbnail if user didn't provide a cover
+      if (!parsed.coverImage && !parsed.coverGradient) {
+        generateCollectionThumbnail(parsed.title).then(async (thumbnail) => {
+          try {
+            await storage.updateCollectionThumbnail(
+              collection.id,
+              userId,
+              thumbnail.coverImage,
+              thumbnail.coverGradient
+            );
+          } catch (err) {
+            console.error("Error updating collection thumbnail:", err);
+          }
+        });
+      }
       
       res.json(collection);
     } catch (error) {

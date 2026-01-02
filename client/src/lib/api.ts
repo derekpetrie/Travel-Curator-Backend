@@ -14,11 +14,15 @@ export async function fetchCollection(id: number): Promise<Collection> {
   return response.json();
 }
 
-export async function createCollection(title: string): Promise<Collection> {
+export async function createCollection(
+  title: string, 
+  coverImage?: string | null, 
+  coverGradient?: string | null
+): Promise<Collection> {
   const response = await fetch(`${API_BASE}/collections`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, coverImage, coverGradient }),
   });
   if (!response.ok) throw new Error('Failed to create collection');
   return response.json();

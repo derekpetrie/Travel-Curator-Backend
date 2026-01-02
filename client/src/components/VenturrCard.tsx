@@ -77,18 +77,19 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
             <MapPin className="w-12 h-12 text-white/80" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent" />
-        
-        <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-          <h3 className="font-heading text-xl font-bold mb-1 line-clamp-2 leading-tight">
-            {venturr.title}
-          </h3>
-          <div className="flex items-center justify-between">
-            <span className="text-white/80 text-sm font-medium">
-              {venturr.itemCount ?? 0} items
-            </span>
-            <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <ArrowRight className="w-4 h-4 text-white" />
+        {/* Labels with opaque background */}
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <div className="bg-slate-800/95 backdrop-blur-sm rounded-lg px-3 py-2">
+            <h3 className="font-heading text-base font-bold text-white line-clamp-2 leading-tight">
+              {venturr.title}
+            </h3>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-white/80 text-xs font-medium">
+                {venturr.itemCount ?? 0} items
+              </span>
+              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <ArrowRight className="w-3 h-3 text-white" />
+              </div>
             </div>
           </div>
         </div>

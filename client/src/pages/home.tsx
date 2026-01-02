@@ -1,5 +1,6 @@
 import { VenturrCard } from '@/components/VenturrCard';
 import { TabBar } from '@/components/TabBar';
+import { CreateVenturrDrawer } from '@/components/CreateVenturrDrawer';
 import { Plus, Loader2, ArrowUpDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCollections, createCollection, fetchPosts } from '@/lib/api';
@@ -23,6 +24,7 @@ const SORT_LABELS: Record<SortOption, string> = {
 export default function Home() {
   const queryClient = useQueryClient();
   const [sortBy, setSortBy] = useState<SortOption>('lastEdited');
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
 
   const { data: collections, isLoading } = useQuery({
     queryKey: ['collections'],
@@ -30,15 +32,17 @@ export default function Home() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async () => {
-      const title = prompt('Enter Venturr name:');
-      if (!title) return null;
-      return createCollection(title);
+    mutationFn: async ({ title, coverImage, coverGradient }: { title: string; coverImage: string | null; coverGradient: string | null }) => {
+      return createCollection(title, coverImage, coverGradient);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
     },
   });
+
+  const handleCreate = async (title: string, coverImage: string | null, coverGradient: string | null) => {
+    await createMutation.mutateAsync({ title, coverImage, coverGradient });
+  };
 
   // Enhance collections with item count and first post thumbnail
   const collectionsWithCounts = useQuery({
@@ -101,11 +105,11 @@ export default function Home() {
             </h1>
           </div>
           <button 
-            onClick={() => createMutation.mutate()}
+            onClick={() => setShowCreateDrawer(true)}
             data-testid="button-create-venturr-header"
             className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"
           >
-            {createMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+            <Plus className="w-5 h-5" />
           </button>
         </div>
       </header>
@@ -151,12 +155,12 @@ export default function Home() {
             
             {/* Add New Place Holder */}
             <button 
-              onClick={() => createMutation.mutate()}
+              onClick={() => setShowCreateDrawer(true)}
               data-testid="button-create-venturr"
               className="aspect-[4/5] rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all group"
             >
               <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                {createMutation.isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
+                <Plus className="w-6 h-6" />
               </div>
               <span className="font-medium text-sm">Create New</span>
             </button>
@@ -165,6 +169,13 @@ export default function Home() {
       </main>
 
       <TabBar />
+
+      <CreateVenturrDrawer
+        open={showCreateDrawer}
+        onOpenChange={setShowCreateDrawer}
+        onCreate={handleCreate}
+        isCreating={createMutation.isPending}
+      />
     </div>
   );
 }
