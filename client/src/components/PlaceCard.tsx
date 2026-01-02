@@ -29,7 +29,7 @@ export function PlaceCard({ place }: PlaceCardProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/collections/${place.collectionId}/places`] });
+      queryClient.invalidateQueries({ queryKey: ['places', place.collectionId] });
     },
   });
 
