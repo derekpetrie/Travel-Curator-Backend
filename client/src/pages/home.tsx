@@ -1,4 +1,4 @@
-import { CollectionCard } from '@/components/CollectionCard';
+import { VenturrCard } from '@/components/VenturrCard';
 import { TabBar } from '@/components/TabBar';
 import { Plus, Loader2, ArrowUpDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

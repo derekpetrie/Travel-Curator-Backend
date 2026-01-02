@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import CollectionDetail from "@/pages/collection-detail";
+import VenturrDetail from "@/pages/venturr-detail";
 import Profile from "@/pages/profile";
 import Search from "@/pages/search";
 import SavedPosts from "@/pages/saved-posts";
@@ -19,7 +19,7 @@ function AuthenticatedRouter() {
       <Route path="/search" component={Search} />
       <Route path="/profile" component={Profile} />
       <Route path="/saved" component={SavedPosts} />
-      <Route path="/collection/:id" component={CollectionDetail} />
+      <Route path="/venturr/:id" component={VenturrDetail} />
       <Route component={NotFound} />
     </Switch>
   );
