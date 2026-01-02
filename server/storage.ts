@@ -24,8 +24,10 @@ export interface IStorage {
   
   // Places
   getPlaces(collectionId: number): Promise<Place[]>;
+  getAllPlaces(): Promise<Place[]>;
   getPlace(id: number): Promise<Place | undefined>;
   createPlace(place: InsertPlace): Promise<Place>;
+  updatePlaceCategory(id: number, category: string): Promise<void>;
   deletePlace(id: number): Promise<void>;
 }
 
@@ -116,6 +118,14 @@ export class DatabaseStorage implements IStorage {
 
   async deletePlace(id: number): Promise<void> {
     await db.delete(places).where(eq(places.id, id));
+  }
+
+  async getAllPlaces(): Promise<Place[]> {
+    return await db.select().from(places).orderBy(desc(places.createdAt));
+  }
+
+  async updatePlaceCategory(id: number, category: string): Promise<void> {
+    await db.update(places).set({ category }).where(eq(places.id, id));
   }
 }
 

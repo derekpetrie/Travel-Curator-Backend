@@ -625,3 +625,33 @@ async function geocodePlace(
   console.log(`[Geocoding] Could not find coordinates for "${name}" after trying ${uniqueQueries.length} queries`);
   return null;
 }
+
+// Recategorize a single place using AI
+async function recategorizePlace(
+  name: string,
+  city: string | null,
+  country: string | null
+): Promise<string | null> {
+  try {
+    const locationInfo = [name, city, country].filter(Boolean).join(", ");
+    
+    const prompt = `Categorize this travel place into exactly one of these categories: restaurant, cafe, bar, nightlife, hotel, beach, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, other.
+
+Place: ${locationInfo}
+
+Return ONLY the category name, nothing else.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 20,
+      temperature: 0.2,
+    });
+
+    const category = response.choices[0]?.message?.content?.trim().toLowerCase() || null;
+    return category;
+  } catch (error) {
+    console.error(`[Recategorize] Error for "${name}":`, error);
+    return null;
+  }
+}
