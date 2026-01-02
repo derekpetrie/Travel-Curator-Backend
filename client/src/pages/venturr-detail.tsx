@@ -9,7 +9,7 @@ import { Link } from 'wouter';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover, generateSummary, renameCollection } from '@/lib/api';
+import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover, generateSummary, renameCollection, deletePost } from '@/lib/api';
 
 export default function VenturrDetail() {
   const [, params] = useRoute('/venturr/:id');
@@ -61,6 +61,15 @@ export default function VenturrDetail() {
     queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
     queryClient.invalidateQueries({ queryKey: ['collections'] });
   };
+
+  const deletePostMutation = useMutation({
+    mutationFn: deletePost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts', collectionId] });
+      queryClient.invalidateQueries({ queryKey: ['places', collectionId] });
+      queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+    },
+  });
 
   // Auto-generate summary if there are places but no summary
   useEffect(() => {
@@ -213,7 +222,13 @@ export default function VenturrDetail() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : posts.length > 0 ? (
-              posts.map(post => <PostCard key={post.id} post={post} />)
+              posts.map(post => (
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  onDelete={(id) => deletePostMutation.mutate(id)}
+                />
+              ))
             ) : (
               <EmptyState type="posts" />
             )}

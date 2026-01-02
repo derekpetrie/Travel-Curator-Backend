@@ -1,13 +1,14 @@
-import { Play, Instagram, MapPin, ExternalLink } from 'lucide-react';
+import { Play, Instagram, MapPin, ExternalLink, Trash2 } from 'lucide-react';
 import type { Post } from '@shared/schema';
 
 interface PostCardProps {
   post: Post;
+  onDelete?: (id: number) => void;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, onDelete }: PostCardProps) {
   return (
-    <div className="flex gap-4 p-3 rounded-lg bg-card border border-border/50 hover:border-primary/20 transition-colors shadow-sm">
+    <div className="flex gap-4 p-3 rounded-lg bg-card border border-border/50 hover:border-primary/20 transition-colors shadow-sm relative group">
       <div className="relative w-24 h-32 flex-shrink-0 rounded-md overflow-hidden bg-muted">
         {post.thumbnailUrl ? (
           <img 
@@ -66,6 +67,16 @@ export function PostCard({ post }: PostCardProps) {
           )}
         </a>
       </div>
+      
+      {onDelete && (
+        <button
+          onClick={() => onDelete(post.id)}
+          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white/80 flex items-center justify-center hover:bg-destructive hover:text-white transition-colors"
+          data-testid={`button-delete-post-${post.id}`}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
