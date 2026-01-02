@@ -1,7 +1,7 @@
-# Venturr - Travel Collection App
+# Venturr - Travel Discovery App
 
 ## Overview
-Venturr is a mobile-first web application that allows users to save TikTok and Instagram links, automatically extract travel locations using AI, geocode them, and organize everything into visual collections with map views.
+Venturr is a mobile-first web application that allows users to save TikTok and Instagram links, automatically extract travel locations using AI, geocode them, and organize everything into "Venturrs" (branded collections) with map views.
 
 ## Current State
 The application has a production-ready backend with:
@@ -38,13 +38,15 @@ shared/                 # Shared types and schemas
 ## API Endpoints
 All endpoints require authentication (except /api/login, /api/logout, /api/callback)
 
-- `GET /api/collections` - List user's collections
-- `POST /api/collections` - Create new collection
-- `GET /api/collections/:id` - Get collection details
-- `DELETE /api/collections/:id` - Delete collection
-- `GET /api/collections/:id/posts` - Get posts in collection
+Note: API routes use "collections" internally, but UI displays "Venturrs"
+
+- `GET /api/collections` - List user's Venturrs
+- `POST /api/collections` - Create new Venturr
+- `GET /api/collections/:id` - Get Venturr details
+- `DELETE /api/collections/:id` - Delete Venturr
+- `GET /api/collections/:id/posts` - Get posts in Venturr
 - `POST /api/collections/:id/posts` - Add post (triggers AI extraction)
-- `GET /api/collections/:id/places` - Get places in collection
+- `GET /api/collections/:id/places` - Get places in Venturr
 
 ## User Preferences
 - Design: Modern iOS-style with coral primary color (#FF385C)
@@ -52,6 +54,9 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - Corners: 0.5rem/8px rounded (not overly bubbly)
 
 ## Recent Changes
+- 2026-01-02: Renamed "Collection/Collections" to "Venturr/Venturrs" throughout the app
+- 2026-01-02: Updated frontend routes from /collection/:id to /venturr/:id
+- 2026-01-02: Renamed component files (VenturrCard, VenturrMap, EditVenturrDrawer, venturr-detail)
 - 2024-12-31: Added Replit Auth for user authentication
 - 2024-12-31: Added userId to collections for per-user data
 - 2024-12-31: Created landing page for logged-out users
@@ -89,9 +94,9 @@ To test the mobile app on your iPhone:
 
 ### Features Implemented
 - Login screen with Replit Auth integration
-- Home screen with recent collections and places
-- Collections list with create/delete functionality
-- Collection detail with posts and places tabs
+- Home screen with recent Venturrs and places
+- Venturrs list with create/delete functionality
+- Venturr detail with posts and places tabs
 - Add post modal (paste TikTok/Instagram links)
 - Profile screen with user info and logout
 
