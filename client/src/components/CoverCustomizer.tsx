@@ -93,10 +93,10 @@ export function CoverCustomizer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+      <div className="fixed inset-0 bg-black/50 z-[60]" onClick={onClose} />
       
-      <div className="relative w-full max-w-lg bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300">
+      <div className="relative z-[61] w-full max-w-lg bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="font-heading text-lg font-bold">Customize Cover</h2>
           <button
