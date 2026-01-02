@@ -1,11 +1,16 @@
-import { MapPin, Sparkles, Globe, BookmarkCheck } from 'lucide-react';
+import { Sparkles, Globe, BookmarkCheck } from 'lucide-react';
+import venturrrLogo from '../assets/venturr-logo.png';
 
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-          <MapPin className="w-10 h-10 text-primary" />
+        <div className="w-20 h-20 rounded-full overflow-hidden mb-6 shadow-lg">
+          <img 
+            src={venturrrLogo} 
+            alt="Venturr" 
+            className="w-full h-full object-cover"
+          />
         </div>
         
         <h1 className="font-heading text-4xl font-extrabold mb-3 tracking-tight">
