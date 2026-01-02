@@ -83,7 +83,7 @@ export default function Home() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {displayCollections.map((collection: any) => (
               <CollectionCard key={collection.id} collection={collection} />
             ))}
