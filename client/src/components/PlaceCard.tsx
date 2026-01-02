@@ -47,7 +47,7 @@ export function PlaceCard({ place }: PlaceCardProps) {
         <div>
           {place.category && (
             <div className="flex items-center gap-1.5 mb-1">
-              <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+              <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={true}>
                 <DropdownMenuTrigger asChild>
                   <button 
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/20 transition-colors"

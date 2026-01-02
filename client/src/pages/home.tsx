@@ -25,6 +25,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   const [sortBy, setSortBy] = useState<SortOption>('lastEdited');
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   const { data: collections, isLoading } = useQuery({
     queryKey: ['collections'],
@@ -118,7 +119,7 @@ export default function Home() {
       <main className="px-6 py-6">
         {/* Sort Controls */}
         <div className="flex justify-end mb-4">
-          <DropdownMenu modal={true}>
+          <DropdownMenu open={sortMenuOpen} onOpenChange={setSortMenuOpen} modal={true}>
             <DropdownMenuTrigger asChild>
               <button 
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -132,7 +133,10 @@ export default function Home() {
               {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
                 <DropdownMenuItem
                   key={option}
-                  onSelect={() => setSortBy(option)}
+                  onSelect={() => {
+                    setSortBy(option);
+                    setSortMenuOpen(false);
+                  }}
                   className={sortBy === option ? 'bg-primary/10 text-primary' : ''}
                   data-testid={`sort-option-${option}`}
                 >
