@@ -97,7 +97,7 @@ export function EditCollectionDrawer({
                   </label>
                   <button
                     onClick={() => setShowCoverCustomizer(true)}
-                    className="w-full h-32 rounded-xl overflow-hidden relative group border border-border"
+                    className="w-full h-32 rounded-xl overflow-hidden relative border border-border"
                     data-testid="button-change-cover"
                   >
                     {currentCoverImage ? (
@@ -114,8 +114,8 @@ export function EditCollectionDrawer({
                         }}
                       />
                     )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <div className="flex items-center gap-2 text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-white font-medium">
                         <ImagePlus className="w-5 h-5" />
                         Change Cover
                       </div>
