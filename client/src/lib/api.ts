@@ -47,13 +47,23 @@ export async function fetchPosts(collectionId: number): Promise<Post[]> {
   return response.json();
 }
 
-export async function addPost(collectionId: number, url: string): Promise<{ post: Post; places: Place[] }> {
+export interface AddPostError {
+  error: string;
+  needsManualCaption?: boolean;
+}
+
+export async function addPost(collectionId: number, url: string, manualCaption?: string): Promise<{ post: Post; places: Place[] }> {
   const response = await fetch(`${API_BASE}/collections/${collectionId}/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, manualCaption }),
   });
-  if (!response.ok) throw new Error('Failed to add post');
+  if (!response.ok) {
+    const errorData: AddPostError = await response.json();
+    const error = new Error(errorData.error) as Error & { needsManualCaption?: boolean };
+    error.needsManualCaption = errorData.needsManualCaption;
+    throw error;
+  }
   return response.json();
 }
 

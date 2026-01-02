@@ -1,5 +1,5 @@
 import { Drawer } from 'vaul';
-import { PlusSquare, Link as LinkIcon, Check, Loader2, FolderPlus, Folder } from 'lucide-react';
+import { PlusSquare, Link as LinkIcon, Check, Loader2, FolderPlus, Folder, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,9 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabType>('new');
   const [isSuccess, setIsSuccess] = useState(false);
   const [open, setOpen] = useState(false);
+  const [manualCaption, setManualCaption] = useState('');
+  const [needsManualCaption, setNeedsManualCaption] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ['collections'],
@@ -26,10 +29,19 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
     setSelectedCollection(collections[0].id);
   }
 
+  const handleMutationError = (error: Error & { needsManualCaption?: boolean }) => {
+    if (error.needsManualCaption) {
+      setNeedsManualCaption(true);
+      setErrorMessage('Could not fetch post details automatically. Please describe the travel locations mentioned in this post.');
+    } else {
+      setErrorMessage(error.message || 'Something went wrong. Please try again.');
+    }
+  };
+
   const addToExistingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedCollection) throw new Error('No collection selected');
-      return addPost(selectedCollection, url);
+      return addPost(selectedCollection, url, needsManualCaption ? manualCaption : undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collections'] });
@@ -37,12 +49,13 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['places'] });
       showSuccessAndClose();
     },
+    onError: handleMutationError,
   });
 
   const createNewMutation = useMutation({
     mutationFn: async () => {
       const collection = await createCollection(newCollectionName);
-      await addPost(collection.id, url);
+      await addPost(collection.id, url, needsManualCaption ? manualCaption : undefined);
       return collection;
     },
     onSuccess: () => {
@@ -51,6 +64,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['places'] });
       showSuccessAndClose();
     },
+    onError: handleMutationError,
   });
 
   const showSuccessAndClose = () => {
@@ -59,13 +73,26 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       setIsSuccess(false);
       setUrl('');
       setNewCollectionName('');
+      setManualCaption('');
+      setNeedsManualCaption(false);
+      setErrorMessage('');
       setActiveTab('new');
       setOpen(false);
     }, 2000);
   };
 
+  const resetForm = () => {
+    setUrl('');
+    setNewCollectionName('');
+    setManualCaption('');
+    setNeedsManualCaption(false);
+    setErrorMessage('');
+    setActiveTab('new');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     if (!canSubmit) return;
     if (activeTab === 'existing') {
       addToExistingMutation.mutate();
@@ -75,12 +102,16 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
   };
 
   const isSubmitting = addToExistingMutation.isPending || createNewMutation.isPending;
-  const canSubmitExisting = url.trim() && selectedCollection;
-  const canSubmitNew = url.trim() && newCollectionName.trim();
+  const hasRequiredCaption = !needsManualCaption || manualCaption.trim().length > 0;
+  const canSubmitExisting = url.trim() && selectedCollection && hasRequiredCaption;
+  const canSubmitNew = url.trim() && newCollectionName.trim() && hasRequiredCaption;
   const canSubmit = activeTab === 'existing' ? canSubmitExisting : canSubmitNew;
 
   return (
-    <Drawer.Root shouldScaleBackground open={open} onOpenChange={setOpen}>
+    <Drawer.Root shouldScaleBackground open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) resetForm();
+    }}>
       <Drawer.Trigger asChild>
         {children}
       </Drawer.Trigger>
@@ -218,6 +249,33 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                     </div>
                   )}
 
+                  {errorMessage && !needsManualCaption && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                      <p className="text-sm text-destructive">{errorMessage}</p>
+                    </div>
+                  )}
+
+                  {needsManualCaption && (
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-amber-700">{errorMessage}</p>
+                      </div>
+                      <label className="text-sm font-medium ml-1">Describe the locations</label>
+                      <textarea 
+                        placeholder="e.g., This video shows a cafe called Blue Bottle Coffee in Shibuya, Tokyo..."
+                        className="w-full min-h-[100px] p-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none resize-none"
+                        value={manualCaption}
+                        onChange={(e) => setManualCaption(e.target.value)}
+                        data-testid="input-manual-caption"
+                      />
+                      <p className="text-xs text-muted-foreground ml-1">
+                        Include place names, cities, or addresses mentioned in the post.
+                      </p>
+                    </div>
+                  )}
+
                   <button 
                     type="submit"
                     disabled={isSubmitting || !canSubmit}
@@ -227,10 +285,10 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        {activeTab === 'new' ? 'Creating & Extracting...' : 'Extracting Places...'}
+                        {needsManualCaption ? 'Saving...' : (activeTab === 'new' ? 'Creating & Extracting...' : 'Extracting Places...')}
                       </>
                     ) : (
-                      activeTab === 'new' ? 'Create Collection & Save' : 'Save to Collection'
+                      needsManualCaption ? 'Save with Description' : (activeTab === 'new' ? 'Create Collection & Save' : 'Save to Collection')
                     )}
                   </button>
                 </form>
