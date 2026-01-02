@@ -55,12 +55,19 @@ export function ShareIntentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!shareIntent) {
+      return;
+    }
+    
     const url = extractUrl(shareIntent);
     if (url && isValidSocialUrl(url)) {
       setSharedUrl(url);
       refreshCollections();
+    } else {
+      setSharedUrl(null);
+      resetShareIntent();
     }
-  }, [shareIntent, refreshCollections]);
+  }, [shareIntent, refreshCollections, resetShareIntent]);
 
   const clearSharedUrl = useCallback(() => {
     setSharedUrl(null);

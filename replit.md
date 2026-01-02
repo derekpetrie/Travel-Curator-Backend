@@ -66,6 +66,8 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - Corners: 0.5rem/8px rounded (not overly bubbly)
 
 ## Recent Changes
+- 2026-01-02: Added iOS share sheet integration using expo-share-intent
+- 2026-01-02: Created ShareIntentProvider and ShareIntentModal for handling shared URLs
 - 2026-01-02: Renamed "Collection/Collections" to "Venturr/Venturrs" throughout the app
 - 2026-01-02: Updated frontend routes from /collection/:id to /venturr/:id
 - 2026-01-02: Renamed component files (VenturrCard, VenturrMap, EditVenturrDrawer, venturr-detail)
@@ -111,6 +113,24 @@ To test the mobile app on your iPhone:
 - Venturr detail with posts and places tabs
 - Add post modal (paste TikTok/Instagram links)
 - Profile screen with user info and logout
+- **iOS Share Sheet integration** - Share links directly from TikTok/Instagram to Venturr
+
+### iOS Share Sheet (Requires Custom Build)
+The share sheet feature allows users to save TikTok/Instagram links directly from those apps without opening Venturr first. This requires a custom development build (won't work in Expo Go).
+
+**To build and test on your iPhone:**
+
+1. Install EAS CLI locally: `npm install -g eas-cli`
+2. Log in to Expo: `eas login`
+3. Create a development build: `eas build --profile development --platform ios`
+4. Download and install the .ipa file on your iPhone (via TestFlight or ad-hoc)
+5. Open TikTok/Instagram, tap Share on a video, select "Venturr" from the share sheet
+6. Choose which Venturr to save the link to
+
+**How it works:**
+- `expo-share-intent` plugin in app.json enables the iOS Share Extension
+- `ShareIntentProvider` in `mobile/lib/share-intent-context.tsx` handles incoming URLs
+- `ShareIntentModal` in `mobile/components/ShareIntentModal.tsx` shows the collection picker
 
 ### API Connection
 The mobile app connects to the same backend at the configured API URL in `app.json`.

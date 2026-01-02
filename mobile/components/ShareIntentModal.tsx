@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Pressable,
+  Alert,
 } from 'react-native';
-import { Check, X, FolderOpen } from 'lucide-react-native';
+import { X, FolderOpen, CheckCircle } from 'lucide-react-native';
 import { colors, spacing, radius } from '../lib/colors';
 import { useShareIntentContext } from '../lib/share-intent-context';
 import { Collection } from '../lib/api';
@@ -21,7 +21,12 @@ export function ShareIntentModal() {
 
   const handleSelectCollection = async (collection: Collection) => {
     const success = await addToCollection(collection.id);
-    if (success) {
+    if (!success) {
+      Alert.alert(
+        'Save Failed',
+        'Could not save this link to your Venturr. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
