@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Home, PlusSquare, User, Search } from 'lucide-react';
+import { Home, PlusSquare, User, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddPostDrawer } from './AddPostDrawer';
 
@@ -15,8 +15,8 @@ export function TabBar() {
         </Link>
         
         <Link href="/search" className={cn("flex flex-col items-center gap-1 transition-colors", location === '/search' ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-          <Search className="w-6 h-6" strokeWidth={location === '/search' ? 2.5 : 2} />
-          <span className="text-[10px] font-medium">Search</span>
+          <Compass className="w-6 h-6" strokeWidth={location === '/search' ? 2.5 : 2} />
+          <span className="text-[10px] font-medium">Explore</span>
         </Link>
 
         <AddPostDrawer>

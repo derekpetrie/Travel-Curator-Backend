@@ -91,6 +91,12 @@ export async function fetchPlaces(collectionId: number): Promise<Place[]> {
   return response.json();
 }
 
+export async function fetchAllPlaces(): Promise<Place[]> {
+  const response = await fetch(`${API_BASE}/places`);
+  if (!response.ok) throw new Error('Failed to fetch places');
+  return response.json();
+}
+
 export async function deletePlace(id: number): Promise<void> {
   const response = await fetch(`${API_BASE}/places/${id}`, {
     method: 'DELETE',
