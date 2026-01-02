@@ -40,7 +40,7 @@ export default function Home() {
     },
   });
 
-  // Enhance collections with item count from posts
+  // Enhance collections with item count and first post thumbnail
   const collectionsWithCounts = useQuery({
     queryKey: ['collectionsWithCounts', collections],
     queryFn: async () => {
@@ -50,14 +50,17 @@ export default function Home() {
         collections.map(async (collection: Collection) => {
           try {
             const posts = await fetchPosts(collection.id);
+            const firstPostThumbnail = posts.length > 0 ? posts[0].thumbnailUrl : null;
             return {
               ...collection,
               itemCount: posts.length,
+              firstPostThumbnail,
             };
           } catch {
             return {
               ...collection,
               itemCount: 0,
+              firstPostThumbnail: null,
             };
           }
         })

@@ -5,7 +5,7 @@ import {
   type Post, type InsertPost,
   type Place, type InsertPlace
 } from "@shared/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, asc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Collections
@@ -85,11 +85,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(collections.id, id), eq(collections.userId, userId)));
   }
 
-  // Posts
+  // Posts - ordered by createdAt ASC so first post is the earliest added
   async getPosts(collectionId: number): Promise<Post[]> {
     return await db.select().from(posts)
       .where(eq(posts.collectionId, collectionId))
-      .orderBy(desc(posts.createdAt));
+      .orderBy(asc(posts.createdAt));
   }
 
   async getPost(id: number): Promise<Post | undefined> {

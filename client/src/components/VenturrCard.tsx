@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renameCollection, deleteCollection } from '@/lib/api';
 
 interface VenturrCardProps {
-  venturr: Collection & { itemCount?: number };
+  venturr: Collection & { itemCount?: number; firstPostThumbnail?: string | null };
 }
 
 function parseGradient(gradient: string | null | undefined): { from: string; to: string } {
@@ -23,6 +23,9 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
   const gradient = parseGradient(venturr.coverGradient);
   const [showMenu, setShowMenu] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Priority: custom upload > first post thumbnail > gradient fallback
+  const displayImage = venturr.coverImage || venturr.firstPostThumbnail || null;
 
   const renameMutation = useMutation({
     mutationFn: async () => {
@@ -60,9 +63,9 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
   return (
     <div className="relative">
       <Link href={`/venturr/${venturr.id}`} className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-        {venturr.coverImage ? (
+        {displayImage ? (
           <img 
-            src={venturr.coverImage} 
+            src={displayImage} 
             alt={venturr.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
@@ -74,7 +77,7 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
             <MapPin className="w-12 h-12 text-white/80" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent" />
         
         <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
           <h3 className="font-heading text-xl font-bold mb-1 line-clamp-2 leading-tight">
