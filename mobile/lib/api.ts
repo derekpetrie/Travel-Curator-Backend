@@ -93,10 +93,12 @@ export interface Post {
 export interface Place {
   id: number;
   name: string;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-  postId: number;
+  city?: string | null;
+  country?: string | null;
+  category?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  collectionId: number;
 }
 
 export const authApi = {
@@ -114,4 +116,8 @@ export const collectionsApi = {
   addPost: (id: number, url: string) => 
     api.post<Post>(`/api/collections/${id}/posts`, { url }),
   getPlaces: (id: number) => api.get<Place[]>(`/api/collections/${id}/places`),
+};
+
+export const placesApi = {
+  getAll: () => api.get<Place[]>('/api/places'),
 };

@@ -66,6 +66,9 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - Corners: 0.5rem/8px rounded (not overly bubbly)
 
 ## Recent Changes
+- 2026-01-02: Renamed Search to Explore with map view showing all saved places
+- 2026-01-02: Added /api/places endpoint for fetching all user places across Venturrs
+- 2026-01-02: Added Explore tab to mobile app with place list and filters
 - 2026-01-02: Added iOS share sheet integration using expo-share-intent
 - 2026-01-02: Created ShareIntentProvider and ShareIntentModal for handling shared URLs
 - 2026-01-02: Renamed "Collection/Collections" to "Venturr/Venturrs" throughout the app

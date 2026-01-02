@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Bookmark, User } from 'lucide-react-native';
+import { Home, Bookmark, User, Compass } from 'lucide-react-native';
 import { colors } from '../../lib/colors';
 
 export default function TabLayout() {
@@ -31,9 +31,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Explore',
+          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="collections"
         options={{
-          title: 'Saved Posts',
+          title: 'Venturrs',
           tabBarIcon: ({ color, size }) => <Bookmark size={size} color={color} />,
         }}
       />
