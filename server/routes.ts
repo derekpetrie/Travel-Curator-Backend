@@ -5,6 +5,9 @@ import { insertCollectionSchema, insertPostSchema, insertPlaceSchema } from "@sh
 import { OpenAI } from "openai";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { generateCollectionThumbnail } from "./lib/thumbnail";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+
+const objectStorageService = new ObjectStorageService();
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -24,6 +27,9 @@ export async function registerRoutes(
   // Setup authentication FIRST
   await setupAuth(app);
   registerAuthRoutes(app);
+  
+  // Register object storage routes for file uploads
+  registerObjectStorageRoutes(app);
   
   // Collections - protected routes
   app.get("/api/collections", isAuthenticated, async (req, res) => {
@@ -119,6 +125,39 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error renaming collection:", error);
       res.status(500).json({ error: "Failed to rename collection" });
+    }
+  });
+
+  // Update collection cover (custom image or gradient)
+  app.patch("/api/collections/:id/cover", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { coverImage, coverGradient } = req.body;
+
+      // Get current collection to verify ownership
+      const existingCollection = await storage.getCollection(id, userId);
+      if (!existingCollection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+
+      // If coverImage is from object storage, normalize and set ACL
+      let normalizedCoverImage = coverImage;
+      if (coverImage && coverImage.startsWith("https://storage.googleapis.com/")) {
+        normalizedCoverImage = await objectStorageService.trySetObjectEntityAclPolicy(
+          coverImage,
+          { owner: userId, visibility: "public" }
+        );
+      }
+
+      // Update the cover
+      await storage.updateCollectionThumbnail(id, userId, normalizedCoverImage, coverGradient);
+
+      const updatedCollection = await storage.getCollection(id, userId);
+      res.json(updatedCollection);
+    } catch (error) {
+      console.error("Error updating collection cover:", error);
+      res.status(500).json({ error: "Failed to update collection cover" });
     }
   });
 

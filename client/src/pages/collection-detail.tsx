@@ -3,17 +3,20 @@ import { TabBar } from '@/components/TabBar';
 import { PostCard } from '@/components/PostCard';
 import { PlaceCard } from '@/components/PlaceCard';
 import { CollectionMap } from '@/components/CollectionMap';
-import { ChevronLeft, Share2, Map, Grid, List, MoreHorizontal, Loader2 } from 'lucide-react';
+import { CoverCustomizer } from '@/components/CoverCustomizer';
+import { ChevronLeft, Share2, Map, Grid, List, ImagePlus, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
-import { fetchCollection, fetchPosts, fetchPlaces } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover } from '@/lib/api';
 
 export default function CollectionDetail() {
   const [, params] = useRoute('/collection/:id');
   const collectionId = parseInt(params?.id || '0');
   const [activeTab, setActiveTab] = useState<'posts' | 'places' | 'map'>('posts');
+  const [showCoverCustomizer, setShowCoverCustomizer] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: collection, isLoading: collectionLoading } = useQuery({
     queryKey: ['collection', collectionId],
@@ -33,6 +36,12 @@ export default function CollectionDetail() {
     enabled: !!collectionId,
   });
 
+  const handleSaveCover = async (coverImage: string | null, coverGradient: string | null) => {
+    await updateCollectionCover(collectionId, coverImage, coverGradient);
+    queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+    queryClient.invalidateQueries({ queryKey: ['collections'] });
+  };
+
   if (collectionLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -45,7 +54,9 @@ export default function CollectionDetail() {
     return <div className="p-8 text-center">Collection not found</div>;
   }
 
-  const thumbnail = posts[0]?.thumbnailUrl || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&h=600&fit=crop';
+  const coverImage = collection.coverImage || posts[0]?.thumbnailUrl;
+  const coverGradient = collection.coverGradient || 'FF385C, FF6B8A';
+  const gradientParts = coverGradient.split(',').map(s => s.trim());
   const createdAt = new Date(collection.createdAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -56,26 +67,37 @@ export default function CollectionDetail() {
     <div className="min-h-screen pb-24 bg-background">
       {/* Header Image */}
       <div className="relative h-64 w-full">
-        <img 
-          src={thumbnail} 
-          alt={collection.title} 
-          className="w-full h-full object-cover"
-        />
+        {coverImage ? (
+          <img 
+            src={coverImage} 
+            alt={collection.title} 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div 
+            className="w-full h-full"
+            style={{ 
+              background: `linear-gradient(135deg, ${gradientParts[0] || '#FF385C'} 0%, ${gradientParts[1] || '#FF6B8A'} 100%)` 
+            }}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-background" />
         
         {/* Nav Bar */}
         <div className="absolute top-0 left-0 right-0 p-6 pt-safe-top flex justify-between items-center text-white">
-          <Link href="/">
-            <a className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-back">
-              <ChevronLeft className="w-6 h-6" />
-            </a>
+          <Link href="/" className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-back">
+            <ChevronLeft className="w-6 h-6" />
           </Link>
           <div className="flex gap-3">
+             <button 
+               onClick={() => setShowCoverCustomizer(true)}
+               className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" 
+               data-testid="button-customize-cover"
+             >
+              <ImagePlus className="w-5 h-5" />
+            </button>
              <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-share">
               <Share2 className="w-5 h-5" />
-            </button>
-             <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-more">
-              <MoreHorizontal className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -168,6 +190,14 @@ export default function CollectionDetail() {
       </div>
 
       <TabBar />
+
+      <CoverCustomizer
+        isOpen={showCoverCustomizer}
+        onClose={() => setShowCoverCustomizer(false)}
+        onSave={handleSaveCover}
+        currentCoverImage={collection.coverImage}
+        currentCoverGradient={collection.coverGradient}
+      />
     </div>
   );
 }

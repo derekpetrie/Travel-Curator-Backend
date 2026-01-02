@@ -86,3 +86,17 @@ export async function deletePlace(id: number): Promise<void> {
   });
   if (!response.ok) throw new Error('Failed to delete place');
 }
+
+export async function updateCollectionCover(
+  id: number,
+  coverImage: string | null,
+  coverGradient: string | null
+): Promise<Collection> {
+  const response = await fetch(`${API_BASE}/collections/${id}/cover`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ coverImage, coverGradient }),
+  });
+  if (!response.ok) throw new Error('Failed to update collection cover');
+  return response.json();
+}
