@@ -311,10 +311,28 @@ export async function registerRoutes(
           )
         );
         
-        // Clear the summary so it regenerates with new places
+        // Regenerate summary in the background when new places are extracted
         if (places.length > 0) {
           const userId = getUserId(req);
-          await storage.updateCollection(collectionId, userId, { summary: null });
+          // Fire-and-forget summary regeneration
+          (async () => {
+            try {
+              const allPlaces = await storage.getPlaces(collectionId);
+              if (allPlaces.length > 0) {
+                const placeNames = allPlaces.map(p => `${p.name}${p.city ? `, ${p.city}` : ''}${p.country ? ` (${p.country})` : ''}`);
+                const prompt = `You are a travel guide. Create a VERY brief (max 15 words) itinerary summary for visiting these places: ${placeNames.join('; ')}. Be casual and inspiring. No emojis. Just one short sentence.`;
+                const response = await openai.chat.completions.create({
+                  model: "gpt-4o-mini",
+                  messages: [{ role: "user", content: prompt }],
+                  max_tokens: 50,
+                });
+                const summary = response.choices[0]?.message?.content?.trim() || null;
+                await storage.updateCollection(collectionId, userId, { summary });
+              }
+            } catch (err) {
+              console.error("Error regenerating summary:", err);
+            }
+          })();
         }
       }
 
