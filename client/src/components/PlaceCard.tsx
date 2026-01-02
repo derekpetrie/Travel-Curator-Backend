@@ -1,14 +1,14 @@
-import { MapPin, Navigation, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { MapPin, Navigation } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { Place } from '@shared/schema';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const PLACE_CATEGORIES = [
   'restaurant', 'cafe', 'bar', 'nightlife', 'hotel', 'beach', 'attraction',
@@ -22,7 +22,6 @@ interface PlaceCardProps {
 
 export function PlaceCard({ place }: PlaceCardProps) {
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
 
   const updateCategoryMutation = useMutation({
     mutationFn: async (newCategory: string) => {
@@ -38,7 +37,6 @@ export function PlaceCard({ place }: PlaceCardProps) {
     if (newCategory !== place.category) {
       updateCategoryMutation.mutate(newCategory);
     }
-    setIsOpen(false);
   };
 
   return (
@@ -47,29 +45,28 @@ export function PlaceCard({ place }: PlaceCardProps) {
         <div>
           {place.category && (
             <div className="flex items-center gap-1.5 mb-1">
-              <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={true}>
-                <DropdownMenuTrigger asChild>
-                  <button 
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/20 transition-colors"
-                    data-testid={`category-picker-${place.id}`}
-                  >
+              <Select value={place.category} onValueChange={handleCategoryChange}>
+                <SelectTrigger 
+                  className="h-auto px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/20 transition-colors border-none shadow-none w-auto"
+                  data-testid={`category-picker-${place.id}`}
+                >
+                  <SelectValue>
                     {updateCategoryMutation.isPending ? 'Updating...' : place.category}
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
                   {PLACE_CATEGORIES.map((category) => (
-                    <DropdownMenuItem
+                    <SelectItem
                       key={category}
-                      onClick={() => handleCategoryChange(category)}
-                      className={place.category === category ? 'bg-primary/10 text-primary' : ''}
+                      value={category}
                       data-testid={`category-option-${category}`}
+                      className="capitalize"
                     >
-                      <span className="capitalize">{category}</span>
-                    </DropdownMenuItem>
+                      {category}
+                    </SelectItem>
                   ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </SelectContent>
+              </Select>
             </div>
           )}
           <h3 className="font-heading text-lg font-bold text-foreground">

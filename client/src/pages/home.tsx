@@ -7,11 +7,12 @@ import { fetchCollections, createCollection, fetchPosts } from '@/lib/api';
 import { useState, useMemo } from 'react';
 import type { Collection } from '@shared/schema';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type SortOption = 'lastEdited' | 'created' | 'name';
 
@@ -25,7 +26,6 @@ export default function Home() {
   const queryClient = useQueryClient();
   const [sortBy, setSortBy] = useState<SortOption>('lastEdited');
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   const { data: collections, isLoading } = useQuery({
     queryKey: ['collections'],
@@ -119,32 +119,26 @@ export default function Home() {
       <main className="px-6 py-6">
         {/* Sort Controls */}
         <div className="flex justify-end mb-4">
-          <DropdownMenu open={sortMenuOpen} onOpenChange={setSortMenuOpen} modal={true}>
-            <DropdownMenuTrigger asChild>
-              <button 
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                data-testid="sort-dropdown-trigger"
-              >
-                <ArrowUpDown className="w-4 h-4" />
-                <span>{SORT_LABELS[sortBy]}</span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            <SelectTrigger 
+              className="w-auto border-none shadow-none bg-transparent gap-1.5 px-3 py-1.5 h-auto text-sm text-muted-foreground hover:text-foreground"
+              data-testid="sort-dropdown-trigger"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
               {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
-                <DropdownMenuItem
+                <SelectItem
                   key={option}
-                  onSelect={() => {
-                    setSortBy(option);
-                    setSortMenuOpen(false);
-                  }}
-                  className={sortBy === option ? 'bg-primary/10 text-primary' : ''}
+                  value={option}
                   data-testid={`sort-option-${option}`}
                 >
                   {SORT_LABELS[option]}
-                </DropdownMenuItem>
+                </SelectItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </SelectContent>
+          </Select>
         </div>
 
         {isLoading ? (
