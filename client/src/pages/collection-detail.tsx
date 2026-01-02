@@ -121,7 +121,7 @@ export default function CollectionDetail() {
            <div className="bg-card shadow-xl rounded-xl p-5 border border-border/50">
              <h1 className="font-heading text-2xl font-bold mb-1" data-testid="text-collection-title">{collection.title}</h1>
              <p className="text-muted-foreground text-sm font-medium" data-testid="text-collection-info">
-               {posts.length + places.length} items • Created on {createdAt}
+               {posts.length} {posts.length === 1 ? 'post' : 'posts'} • {places.length} {places.length === 1 ? 'place' : 'places'}
              </p>
              {(collection.summary || summaryMutation.isPending) && (
                <div className="mt-3 pt-3 border-t border-border/50">
