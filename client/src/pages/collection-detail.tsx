@@ -3,10 +3,10 @@ import { TabBar } from '@/components/TabBar';
 import { PostCard } from '@/components/PostCard';
 import { PlaceCard } from '@/components/PlaceCard';
 import { CollectionMap } from '@/components/CollectionMap';
-import { CoverCustomizer } from '@/components/CoverCustomizer';
-import { ChevronLeft, Share2, Map, Grid, List, ImagePlus, Loader2, Sparkles, Pencil, Check, X } from 'lucide-react';
+import { EditCollectionDrawer } from '@/components/EditCollectionDrawer';
+import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil } from 'lucide-react';
 import { Link } from 'wouter';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover, generateSummary, renameCollection } from '@/lib/api';
@@ -15,10 +15,7 @@ export default function CollectionDetail() {
   const [, params] = useRoute('/collection/:id');
   const collectionId = parseInt(params?.id || '0');
   const [activeTab, setActiveTab] = useState<'posts' | 'places' | 'map'>('posts');
-  const [showCoverCustomizer, setShowCoverCustomizer] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState('');
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const [showEditDrawer, setShowEditDrawer] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: collection, isLoading: collectionLoading } = useQuery({
@@ -52,32 +49,10 @@ export default function CollectionDetail() {
     },
   });
 
-  const renameMutation = useMutation({
-    mutationFn: (title: string) => renameCollection(collectionId, title),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
-      queryClient.invalidateQueries({ queryKey: ['collections'] });
-      setIsEditingTitle(false);
-    },
-  });
-
-  const startEditingTitle = () => {
-    setEditedTitle(collection?.title || '');
-    setIsEditingTitle(true);
-    setTimeout(() => titleInputRef.current?.focus(), 0);
-  };
-
-  const saveTitle = () => {
-    if (editedTitle.trim() && editedTitle.trim() !== collection?.title) {
-      renameMutation.mutate(editedTitle.trim());
-    } else {
-      setIsEditingTitle(false);
-    }
-  };
-
-  const cancelEditingTitle = () => {
-    setIsEditingTitle(false);
-    setEditedTitle('');
+  const handleSaveTitle = async (title: string) => {
+    await renameCollection(collectionId, title);
+    queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+    queryClient.invalidateQueries({ queryKey: ['collections'] });
   };
 
   // Auto-generate summary if there are places but no summary
@@ -135,11 +110,11 @@ export default function CollectionDetail() {
           </Link>
           <div className="flex gap-3">
              <button 
-               onClick={() => setShowCoverCustomizer(true)}
+               onClick={() => setShowEditDrawer(true)}
                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" 
-               data-testid="button-customize-cover"
+               data-testid="button-edit-collection"
              >
-              <ImagePlus className="w-5 h-5" />
+              <Pencil className="w-5 h-5" />
             </button>
              <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-share">
               <Share2 className="w-5 h-5" />
@@ -150,68 +125,10 @@ export default function CollectionDetail() {
         {/* Title Area */}
         <div className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-8">
            <div className="bg-card shadow-xl rounded-xl p-5 border border-border/50">
-             {/* Title Row */}
-             <div className="flex items-start justify-between gap-2 mb-1">
-               {isEditingTitle ? (
-                 <div className="flex-1 flex items-center gap-2">
-                   <input
-                     ref={titleInputRef}
-                     type="text"
-                     value={editedTitle}
-                     onChange={(e) => setEditedTitle(e.target.value)}
-                     onKeyDown={(e) => {
-                       if (e.key === 'Enter') saveTitle();
-                       if (e.key === 'Escape') cancelEditingTitle();
-                     }}
-                     className="flex-1 font-heading text-2xl font-bold bg-transparent border-b-2 border-primary outline-none"
-                     data-testid="input-collection-title"
-                   />
-                   <button
-                     onClick={saveTitle}
-                     disabled={renameMutation.isPending}
-                     className="p-1.5 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
-                     data-testid="button-save-title"
-                   >
-                     {renameMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                   </button>
-                   <button
-                     onClick={cancelEditingTitle}
-                     className="p-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                     data-testid="button-cancel-title"
-                   >
-                     <X className="w-4 h-4" />
-                   </button>
-                 </div>
-               ) : (
-                 <>
-                   <h1 className="font-heading text-2xl font-bold" data-testid="text-collection-title">{collection.title}</h1>
-                   <button
-                     onClick={startEditingTitle}
-                     className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                     data-testid="button-edit-title"
-                   >
-                     <Pencil className="w-4 h-4" />
-                   </button>
-                 </>
-               )}
-             </div>
-             
-             {/* Info Row */}
+             <h1 className="font-heading text-2xl font-bold mb-1" data-testid="text-collection-title">{collection.title}</h1>
              <p className="text-muted-foreground text-sm font-medium" data-testid="text-collection-info">
                {posts.length} {posts.length === 1 ? 'post' : 'posts'} • {places.length} {places.length === 1 ? 'place' : 'places'} • {createdAt}
              </p>
-             
-             {/* Edit Cover Button */}
-             <button
-               onClick={() => setShowCoverCustomizer(true)}
-               className="mt-3 w-full py-2 text-sm font-medium text-muted-foreground hover:text-foreground border border-border/50 rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
-               data-testid="button-edit-cover"
-             >
-               <ImagePlus className="w-4 h-4" />
-               Edit Cover
-             </button>
-             
-             {/* Summary */}
              {(collection.summary || summaryMutation.isPending) && (
                <div className="mt-3 pt-3 border-t border-border/50">
                  {summaryMutation.isPending ? (
@@ -231,7 +148,7 @@ export default function CollectionDetail() {
       </div>
 
       {/* Spacer for the floating title card */}
-      <div className={cn("transition-all", collection.summary || summaryMutation.isPending ? "h-36" : "h-28")} />
+      <div className={cn("transition-all", collection.summary || summaryMutation.isPending ? "h-24" : "h-16")} />
 
       {/* Tabs */}
       <div className="px-6 mt-4 mb-6">
@@ -308,12 +225,14 @@ export default function CollectionDetail() {
 
       <TabBar />
 
-      <CoverCustomizer
-        isOpen={showCoverCustomizer}
-        onClose={() => setShowCoverCustomizer(false)}
-        onSave={handleSaveCover}
-        currentCoverImage={collection.coverImage}
-        currentCoverGradient={collection.coverGradient}
+      <EditCollectionDrawer
+        open={showEditDrawer}
+        onOpenChange={setShowEditDrawer}
+        collection={collection}
+        currentCoverImage={coverImage || null}
+        currentCoverGradient={coverGradient}
+        onSaveTitle={handleSaveTitle}
+        onSaveCover={handleSaveCover}
       />
     </div>
   );
