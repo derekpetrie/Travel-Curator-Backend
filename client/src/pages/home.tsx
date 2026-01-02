@@ -1,14 +1,28 @@
 import { CollectionCard } from '@/components/CollectionCard';
 import { TabBar } from '@/components/TabBar';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, ArrowUpDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCollections, createCollection, fetchPosts } from '@/lib/api';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Collection } from '@shared/schema';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+type SortOption = 'lastEdited' | 'created' | 'name';
+
+const SORT_LABELS: Record<SortOption, string> = {
+  lastEdited: 'Last Edited',
+  created: 'Date Created',
+  name: 'Name',
+};
 
 export default function Home() {
   const queryClient = useQueryClient();
-  const [isCreating, setIsCreating] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('lastEdited');
 
   const { data: collections, isLoading } = useQuery({
     queryKey: ['collections'],
@@ -53,7 +67,22 @@ export default function Home() {
     enabled: !!collections,
   });
 
-  const displayCollections = collectionsWithCounts.data || [];
+  // Sort collections based on selected option
+  const sortedCollections = useMemo(() => {
+    const data = collectionsWithCounts.data || [];
+    return [...data].sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'lastEdited':
+          return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+        case 'created':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'name':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  }, [collectionsWithCounts.data, sortBy]);
 
   return (
     <div className="min-h-screen pb-24 bg-background safe-top">
@@ -78,13 +107,40 @@ export default function Home() {
 
       {/* Content */}
       <main className="px-6 py-6">
+        {/* Sort Controls */}
+        <div className="flex justify-end mb-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button 
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="sort-dropdown-trigger"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                <span>{SORT_LABELS[sortBy]}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => setSortBy(option)}
+                  className={sortBy === option ? 'bg-primary/10 text-primary' : ''}
+                  data-testid={`sort-option-${option}`}
+                >
+                  {SORT_LABELS[option]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {displayCollections.map((collection: any) => (
+            {sortedCollections.map((collection: any) => (
               <CollectionCard key={collection.id} collection={collection} />
             ))}
             

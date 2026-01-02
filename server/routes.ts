@@ -284,6 +284,9 @@ export async function registerRoutes(
 
       const parsed = insertPostSchema.parse(postData);
       const post = await storage.createPost(parsed);
+      
+      // Update collection's updatedAt timestamp
+      await storage.touchCollection(collectionId);
 
       // Extract places from caption using LLM
       let places: any[] = [];

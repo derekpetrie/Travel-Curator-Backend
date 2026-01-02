@@ -13,6 +13,7 @@ export const collections = pgTable("collections", {
   coverGradient: text("cover_gradient"),
   summary: text("summary"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const posts = pgTable("posts", {
@@ -43,6 +44,7 @@ export const places = pgTable("places", {
 export const insertCollectionSchema = createInsertSchema(collections).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertPostSchema = createInsertSchema(posts).omit({

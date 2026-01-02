@@ -14,6 +14,7 @@ export interface IStorage {
   createCollection(collection: InsertCollection): Promise<Collection>;
   updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
   updateCollectionThumbnail(id: number, userId: string, coverImage: string | null, coverGradient: string | null): Promise<void>;
+  touchCollection(id: number): Promise<void>;
   deleteCollection(id: number, userId: string): Promise<void>;
   
   // Posts
@@ -56,7 +57,7 @@ export class DatabaseStorage implements IStorage {
     updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }
   ): Promise<Collection | undefined> {
     const result = await db.update(collections)
-      .set(updates)
+      .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(collections.id, id), eq(collections.userId, userId)))
       .returning();
     return result[0];
@@ -69,8 +70,14 @@ export class DatabaseStorage implements IStorage {
     coverGradient: string | null
   ): Promise<void> {
     await db.update(collections)
-      .set({ coverImage, coverGradient })
+      .set({ coverImage, coverGradient, updatedAt: new Date() })
       .where(and(eq(collections.id, id), eq(collections.userId, userId)));
+  }
+
+  async touchCollection(id: number): Promise<void> {
+    await db.update(collections)
+      .set({ updatedAt: new Date() })
+      .where(eq(collections.id, id));
   }
 
   async deleteCollection(id: number, userId: string): Promise<void> {
