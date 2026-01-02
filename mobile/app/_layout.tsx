@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../lib/auth-context';
+import { ShareIntentProvider } from '../lib/share-intent-context';
+import { ShareIntentModal } from '../components/ShareIntentModal';
 import { colors } from '../lib/colors';
 
 function RootLayoutNav() {
@@ -45,7 +47,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <RootLayoutNav />
+        <ShareIntentProvider>
+          <RootLayoutNav />
+          <ShareIntentModal />
+        </ShareIntentProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
