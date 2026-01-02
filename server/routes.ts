@@ -301,10 +301,14 @@ export async function registerRoutes(
       
       // Step 1: Try text extraction from caption
       if (captionToUse) {
+        console.log("[Extraction] Starting text extraction with caption:", captionToUse.substring(0, 100) + "...");
         extractedPlaces = await extractPlacesFromText(captionToUse);
+        console.log("[Extraction] Text extraction returned", extractedPlaces.length, "places:", extractedPlaces);
         if (extractedPlaces.length > 0) {
           extractionMethod = 'text';
         }
+      } else {
+        console.log("[Extraction] No caption available for text extraction");
       }
       
       // Step 2: If no places found and we have a thumbnail, try vision extraction
@@ -662,7 +666,7 @@ IMPORTANT RULES:
 
 For each place, provide:
 - name: The venue name, optionally with the activity/experience (e.g., "Stamford Bridge - Chelsea FC Match")
-- city: The city (if mentioned or can be inferred)
+- city: The city or region. IMPORTANT: For US locations, you MUST include the state name (e.g., "Summit County, Colorado" or "Austin, Texas" - NEVER just "Summit County" or "Austin")
 - country: The country (if mentioned or can be inferred)
 - category: One of: restaurant, cafe, bar, nightlife, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, sports, entertainment, other
 - confidence: A score from 0 to 1 indicating how confident you are this is a real visitable place
@@ -679,6 +683,7 @@ Text: "${text}"
 
 Return your response as a JSON array of objects with keys: name, city, country, category, confidence. If no places are found, return an empty array.`;
 
+    console.log("[Text Extraction] Calling OpenAI with caption length:", text.length);
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
@@ -687,8 +692,11 @@ Return your response as a JSON array of objects with keys: name, city, country, 
     });
 
     const responseText = completion.choices[0].message.content || "{}";
+    console.log("[Text Extraction] OpenAI response:", responseText.substring(0, 300));
     const parsed = JSON.parse(responseText);
-    const places = parsed.places || [];
+    // Handle various response formats from OpenAI
+    const places = parsed.places || parsed.result || parsed.results || (Array.isArray(parsed) ? parsed : []);
+    console.log("[Text Extraction] Parsed places:", places.length);
 
     // Geocode each place to get coordinates
     const geocodedPlaces = await Promise.all(
