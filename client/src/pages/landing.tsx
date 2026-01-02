@@ -9,7 +9,7 @@ export default function Landing() {
           <img 
             src={venturrrLogo} 
             alt="Venturr" 
-            className="w-[140%] h-[140%] object-cover -ml-[20%] -mt-[20%]"
+            className="w-full h-full object-cover"
           />
         </div>
         
