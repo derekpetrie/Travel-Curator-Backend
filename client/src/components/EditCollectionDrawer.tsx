@@ -110,7 +110,13 @@ export function EditCollectionDrawer({
                       <div 
                         className="w-full h-full"
                         style={{ 
-                          background: `linear-gradient(135deg, ${currentCoverGradient.split(',')[0]?.trim() || '#FF385C'} 0%, ${currentCoverGradient.split(',')[1]?.trim() || '#FF6B8A'} 100%)` 
+                          background: (() => {
+                            const parts = currentCoverGradient.split(',').map(s => {
+                              const color = s.trim();
+                              return color.startsWith('#') ? color : `#${color}`;
+                            });
+                            return `linear-gradient(135deg, ${parts[0] || '#FF385C'} 0%, ${parts[1] || '#FF6B8A'} 100%)`;
+                          })()
                         }}
                       />
                     )}

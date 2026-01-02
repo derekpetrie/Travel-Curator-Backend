@@ -42,6 +42,13 @@ export default function CollectionDetail() {
     queryClient.invalidateQueries({ queryKey: ['collections'] });
   };
 
+  // Invalidate collections when leaving this page to ensure home shows updated covers
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+    };
+  }, [queryClient]);
+
   const summaryMutation = useMutation({
     mutationFn: () => generateSummary(collectionId),
     onSuccess: () => {
@@ -74,9 +81,13 @@ export default function CollectionDetail() {
     return <div className="p-8 text-center">Collection not found</div>;
   }
 
-  const coverImage = collection.coverImage || posts[0]?.thumbnailUrl;
-  const coverGradient = collection.coverGradient || 'FF385C, FF6B8A';
-  const gradientParts = coverGradient.split(',').map(s => s.trim());
+  const coverImage = collection.coverImage;
+  const coverGradient = collection.coverGradient || '#FF385C, #FF6B8A';
+  // Normalize gradient parts to ensure they have # prefix
+  const gradientParts = coverGradient.split(',').map(s => {
+    const color = s.trim();
+    return color.startsWith('#') ? color : `#${color}`;
+  });
   const createdAt = new Date(collection.createdAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -108,27 +119,34 @@ export default function CollectionDetail() {
           <Link href="/" className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-back">
             <ChevronLeft className="w-6 h-6" />
           </Link>
-          <div className="flex gap-3">
-             <button 
-               onClick={() => setShowEditDrawer(true)}
-               className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" 
-               data-testid="button-edit-collection"
-             >
-              <Pencil className="w-5 h-5" />
-            </button>
-             <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors" data-testid="button-share">
-              <Share2 className="w-5 h-5" />
-            </button>
-          </div>
         </div>
 
         {/* Title Area */}
         <div className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-8">
            <div className="bg-card shadow-xl rounded-xl p-5 border border-border/50">
-             <h1 className="font-heading text-2xl font-bold mb-1" data-testid="text-collection-title">{collection.title}</h1>
-             <p className="text-muted-foreground text-sm font-medium" data-testid="text-collection-info">
-               {posts.length} {posts.length === 1 ? 'post' : 'posts'} • {places.length} {places.length === 1 ? 'place' : 'places'} • {createdAt}
-             </p>
+             <div className="flex items-start justify-between gap-3">
+               <div className="flex-1 min-w-0">
+                 <h1 className="font-heading text-2xl font-bold mb-1" data-testid="text-collection-title">{collection.title}</h1>
+                 <p className="text-muted-foreground text-sm font-medium" data-testid="text-collection-info">
+                   {posts.length} {posts.length === 1 ? 'post' : 'posts'} • {places.length} {places.length === 1 ? 'place' : 'places'} • {createdAt}
+                 </p>
+               </div>
+               <div className="flex gap-2 flex-shrink-0">
+                 <button 
+                   onClick={() => setShowEditDrawer(true)}
+                   className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground" 
+                   data-testid="button-edit-collection"
+                 >
+                   <Pencil className="w-4 h-4" />
+                 </button>
+                 <button 
+                   className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground" 
+                   data-testid="button-share"
+                 >
+                   <Share2 className="w-4 h-4" />
+                 </button>
+               </div>
+             </div>
              {(collection.summary || summaryMutation.isPending) && (
                <div className="mt-3 pt-3 border-t border-border/50">
                  {summaryMutation.isPending ? (

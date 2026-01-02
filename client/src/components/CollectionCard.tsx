@@ -12,7 +12,10 @@ interface CollectionCardProps {
 
 function parseGradient(gradient: string | null | undefined): { from: string; to: string } {
   if (!gradient) return { from: '#FF385C', to: '#FF6B8A' };
-  const parts = gradient.split(',').map(s => s.trim());
+  const parts = gradient.split(',').map(s => {
+    const color = s.trim();
+    return color.startsWith('#') ? color : `#${color}`;
+  });
   return { from: parts[0] || '#FF385C', to: parts[1] || '#FF6B8A' };
 }
 
