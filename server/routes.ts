@@ -722,12 +722,22 @@ async function geocodePlace(
   city: string | null,
   country: string | null
 ): Promise<{ lat: number; lng: number } | null> {
+  // Strip common suffixes that OSM might not use
+  const suffixes = [' - Ski Resort', ' - Restaurant', ' - Hotel', ' - Cafe', ' - Bar', ' - Museum'];
+  let cleanName = name;
+  for (const suffix of suffixes) {
+    if (name.includes(suffix)) {
+      cleanName = name.replace(suffix, '');
+      break;
+    }
+  }
+  
   // Strip common prefixes that OSM might not use
   const prefixes = ['Lake ', 'Mount ', 'Mt. ', 'Mt ', 'Beach ', 'Castle ', 'Temple ', 'Shrine ', 'The ', 'Restaurant ', 'Cafe ', 'Hotel '];
-  let strippedName = name;
+  let strippedName = cleanName;
   for (const prefix of prefixes) {
-    if (name.startsWith(prefix)) {
-      strippedName = name.slice(prefix.length);
+    if (cleanName.startsWith(prefix)) {
+      strippedName = cleanName.slice(prefix.length);
       break;
     }
   }
@@ -735,8 +745,14 @@ async function geocodePlace(
   // Helper to check if result matches expected location
   const resultMatchesLocation = (displayName: string): boolean => {
     const lowerDisplay = displayName.toLowerCase();
-    // Must match city if provided
-    if (city && !lowerDisplay.includes(city.toLowerCase())) {
+    // For US locations with city containing state, check state match
+    if (city && city.includes(',')) {
+      const parts = city.split(',').map(p => p.trim().toLowerCase());
+      // Check if any part matches
+      if (!parts.some(part => lowerDisplay.includes(part))) {
+        return false;
+      }
+    } else if (city && !lowerDisplay.includes(city.toLowerCase())) {
       return false;
     }
     // Must match country if provided
@@ -756,10 +772,13 @@ async function geocodePlace(
   };
 
   const queries = [
-    // Full queries with location context (prioritize these)
+    // Try the clean name with full location context first
+    [cleanName, city, country].filter(Boolean).join(", "),
+    // Full queries with location context
     [name, city, country].filter(Boolean).join(", "),
     [strippedName, city, country].filter(Boolean).join(", "),
-    [name, country].filter(Boolean).join(", "),
+    // Try just the clean name with country (for famous landmarks)
+    [cleanName, country].filter(Boolean).join(", "),
     [strippedName, country].filter(Boolean).join(", "),
   ].filter(Boolean) as string[];
 
