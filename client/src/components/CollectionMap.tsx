@@ -1,6 +1,6 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import Map, { Marker, Popup, NavigationControl } from 'react-map-gl/maplibre';
-import maplibregl from 'maplibre-gl';
+import maplibregl, { LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapPin } from 'lucide-react';
 import { useState } from 'react';
@@ -13,19 +13,42 @@ interface CollectionMapProps {
 export function CollectionMap({ places }: CollectionMapProps) {
   const mapRef = useRef<any>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const validPlaces = places.filter(p => p.lat !== null && p.lng !== null);
 
-  const bounds = validPlaces.length > 0 ? getBounds(validPlaces) : null;
+  // Fit bounds when map loads or places change
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || validPlaces.length === 0) return;
 
-  const initialViewState = bounds ? {
-    longitude: (bounds.minLng + bounds.maxLng) / 2,
-    latitude: (bounds.minLat + bounds.maxLat) / 2,
-    zoom: getZoomLevel(bounds),
-  } : {
-    longitude: 0,
-    latitude: 20,
-    zoom: 1.5,
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    // Create bounds that include all places
+    const bounds = new LngLatBounds();
+    validPlaces.forEach(place => {
+      if (place.lng && place.lat) {
+        bounds.extend([place.lng, place.lat]);
+      }
+    });
+
+    // Fit the map to show all markers with padding
+    map.fitBounds(bounds, {
+      padding: { top: 50, bottom: 50, left: 50, right: 50 },
+      maxZoom: 15,
+      duration: 500,
+    });
+  }, [mapLoaded, validPlaces]);
+
+  const handleMapLoad = useCallback(() => {
+    setMapLoaded(true);
+  }, []);
+
+  // Default view state (will be updated by fitBounds after load)
+  const initialViewState = {
+    longitude: validPlaces.length > 0 ? validPlaces[0].lng || 0 : 0,
+    latitude: validPlaces.length > 0 ? validPlaces[0].lat || 20 : 20,
+    zoom: 2,
   };
 
   const handleMarkerClick = useCallback((place: Place) => {
@@ -33,7 +56,7 @@ export function CollectionMap({ places }: CollectionMapProps) {
     if (mapRef.current && place.lat && place.lng) {
       mapRef.current.flyTo({
         center: [place.lng, place.lat],
-        zoom: 12,
+        zoom: 14,
         duration: 1000,
       });
     }
@@ -57,6 +80,7 @@ export function CollectionMap({ places }: CollectionMapProps) {
         ref={mapRef}
         mapLib={maplibregl}
         initialViewState={initialViewState}
+        onLoad={handleMapLoad}
         style={{ width: '100%', height: '100%', minHeight: '400px' }}
         mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
       >
@@ -109,27 +133,3 @@ export function CollectionMap({ places }: CollectionMapProps) {
   );
 }
 
-function getBounds(places: Place[]) {
-  const lats = places.map(p => p.lat!).filter(Boolean);
-  const lngs = places.map(p => p.lng!).filter(Boolean);
-  
-  return {
-    minLat: Math.min(...lats),
-    maxLat: Math.max(...lats),
-    minLng: Math.min(...lngs),
-    maxLng: Math.max(...lngs),
-  };
-}
-
-function getZoomLevel(bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number }) {
-  const latDiff = bounds.maxLat - bounds.minLat;
-  const lngDiff = bounds.maxLng - bounds.minLng;
-  const maxDiff = Math.max(latDiff, lngDiff);
-  
-  if (maxDiff < 0.01) return 14;
-  if (maxDiff < 0.1) return 12;
-  if (maxDiff < 1) return 10;
-  if (maxDiff < 5) return 7;
-  if (maxDiff < 20) return 5;
-  return 3;
-}
