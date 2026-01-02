@@ -14,6 +14,13 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// Valid place categories
+const PLACE_CATEGORIES = [
+  'restaurant', 'cafe', 'bar', 'nightlife', 'hotel', 'beach', 'attraction',
+  'nature', 'park', 'landmark', 'museum', 'shopping', 'activity', 'wellness',
+  'neighborhood', 'skiing', 'theme park', 'other'
+] as const;
+
 // Helper to get userId from request
 function getUserId(req: Request): string {
   return (req.user as any)?.claims?.sub;
@@ -362,6 +369,42 @@ export async function registerRoutes(
     }
   });
 
+  // Update place category
+  app.patch("/api/places/:id/category", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { category } = req.body;
+      
+      // Validate category
+      if (!category || !PLACE_CATEGORIES.includes(category.toLowerCase())) {
+        return res.status(400).json({ 
+          error: "Invalid category", 
+          validCategories: PLACE_CATEGORIES 
+        });
+      }
+      
+      // Get the place to verify ownership through collection
+      const place = await storage.getPlace(id);
+      if (!place) {
+        return res.status(404).json({ error: "Place not found" });
+      }
+      
+      // Verify the place belongs to a collection owned by this user
+      const collection = await storage.getCollection(place.collectionId, userId);
+      if (!collection) {
+        return res.status(403).json({ error: "Not authorized to modify this place" });
+      }
+      
+      await storage.updatePlaceCategory(id, category.toLowerCase());
+      
+      res.json({ success: true, category: category.toLowerCase() });
+    } catch (error) {
+      console.error("Error updating place category:", error);
+      res.status(500).json({ error: "Failed to update place category" });
+    }
+  });
+
   return httpServer;
 }
 
@@ -526,8 +569,14 @@ async function extractPlacesFromText(text: string): Promise<Array<{
 - name: The name of the place
 - city: The city (if mentioned or can be inferred)
 - country: The country (if mentioned or can be inferred)
-- category: One of: restaurant, cafe, bar, nightlife, hotel, beach, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, other
+- category: One of: restaurant, cafe, bar, nightlife, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, other
 - confidence: A score from 0 to 1 indicating how confident you are this is a real place
+
+Category guidance:
+- Use "attraction" for developed tourist sites with paid admission or guided tours (caves, observation decks, aquariums, zoos, theme parks, etc.)
+- Use "nature" for natural outdoor areas without significant development (forests, trails, lakes, mountains)
+- Use "landmark" for iconic recognizable structures or monuments
+- Use "activity" for experiences like tours, classes, or adventure activities
 
 Text: "${text}"
 
@@ -635,7 +684,13 @@ async function recategorizePlace(
   try {
     const locationInfo = [name, city, country].filter(Boolean).join(", ");
     
-    const prompt = `Categorize this travel place into exactly one of these categories: restaurant, cafe, bar, nightlife, hotel, beach, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, other.
+    const prompt = `Categorize this travel place into exactly one of these categories: ${PLACE_CATEGORIES.join(', ')}.
+
+Category guidance:
+- Use "attraction" for developed tourist sites with paid admission or guided tours (caves, observation decks, aquariums, zoos, etc.)
+- Use "nature" for natural outdoor areas without significant development
+- Use "landmark" for iconic recognizable structures or monuments
+- Use "activity" for experiences like tours, classes, or adventure activities
 
 Place: ${locationInfo}
 
