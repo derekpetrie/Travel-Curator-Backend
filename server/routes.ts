@@ -588,16 +588,29 @@ async function extractPlacesFromText(text: string): Promise<Array<{
   confidence: number;
 }>> {
   try {
-    const prompt = `Extract all travel locations, landmarks, restaurants, hotels, or places from the following text. For each place, provide:
-- name: The name of the place
+    const prompt = `Extract all VISITABLE travel destinations from the following text. The experience/activity matters as much as the location.
+
+IMPORTANT RULES:
+1. Extract the ACTUAL VENUE, not team/brand names. For sports teams, extract their stadium/arena with the experience:
+   - "Chelsea FC match" → name: "Stamford Bridge - Chelsea FC Match", category: "sports"
+   - "Lakers game" → name: "Crypto.com Arena - Lakers Game", category: "sports"
+   - "Manchester United" → name: "Old Trafford - Manchester United Match", category: "sports"
+2. Include the ACTIVITY in the name when it's the main draw (e.g., "Borough Market - Food Tour", "Thames - River Cruise")
+3. Only extract places someone can physically visit - skip abstract concepts, brands, or online services
+4. When uncertain if something is a real visitable place, set confidence below 0.5
+
+For each place, provide:
+- name: The venue name, optionally with the activity/experience (e.g., "Stamford Bridge - Chelsea FC Match")
 - city: The city (if mentioned or can be inferred)
 - country: The country (if mentioned or can be inferred)
-- category: One of: restaurant, cafe, bar, nightlife, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, other
-- confidence: A score from 0 to 1 indicating how confident you are this is a real place
+- category: One of: restaurant, cafe, bar, nightlife, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, sports, entertainment, other
+- confidence: A score from 0 to 1 indicating how confident you are this is a real visitable place
 
 Category guidance:
-- Use "attraction" for developed tourist sites with paid admission or guided tours (caves, observation decks, aquariums, zoos, theme parks, etc.)
-- Use "nature" for natural outdoor areas without significant development (forests, trails, lakes, mountains)
+- Use "sports" for stadiums, arenas, and sporting events
+- Use "entertainment" for concerts, shows, theaters, comedy clubs
+- Use "attraction" for developed tourist sites with paid admission (caves, observation decks, aquariums, zoos)
+- Use "nature" for natural outdoor areas (forests, trails, lakes, mountains)
 - Use "landmark" for iconic recognizable structures or monuments
 - Use "activity" for experiences like tours, classes, or adventure activities
 
