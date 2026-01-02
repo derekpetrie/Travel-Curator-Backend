@@ -155,21 +155,42 @@ export async function registerRoutes(
   app.post("/api/collections/:collectionId/posts", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);
-      const { url } = req.body;
+      const { url, manualCaption } = req.body;
 
       if (!url) {
         return res.status(400).json({ error: "URL is required" });
       }
 
+      // Validate URL is from a supported platform
+      const isTikTok = url.includes("tiktok.com");
+      const isInstagram = url.includes("instagram.com");
+      
+      if (!isTikTok && !isInstagram) {
+        return res.status(400).json({ 
+          error: "Unsupported URL. Please use TikTok or Instagram links." 
+        });
+      }
+
       // Fetch metadata using oEmbed
       const metadata = await fetchMetadata(url);
       
+      // If metadata fetch failed and no manual caption provided, return error
+      if (metadata.error && !manualCaption) {
+        return res.status(400).json({ 
+          error: metadata.error,
+          needsManualCaption: true,
+        });
+      }
+      
+      // Use manual caption if provided (fallback when oEmbed fails)
+      const captionToUse = metadata.caption || manualCaption || null;
+      
       const postData = {
         collectionId,
-        source: metadata.source,
+        source: metadata.source as "tiktok" | "instagram",
         url: url,
         thumbnailUrl: metadata.thumbnailUrl,
-        caption: metadata.caption,
+        caption: captionToUse,
         author: metadata.author,
         metadataJson: metadata.raw,
       };
@@ -178,11 +199,12 @@ export async function registerRoutes(
       const post = await storage.createPost(parsed);
 
       // Extract places from caption using LLM
-      if (metadata.caption) {
-        const extractedPlaces = await extractPlacesFromText(metadata.caption);
+      let places: any[] = [];
+      if (captionToUse) {
+        const extractedPlaces = await extractPlacesFromText(captionToUse);
         
         // Save places to database
-        const places = await Promise.all(
+        places = await Promise.all(
           extractedPlaces.map(place => 
             storage.createPlace({
               collectionId,
@@ -196,11 +218,9 @@ export async function registerRoutes(
             })
           )
         );
-
-        res.json({ post, places });
-      } else {
-        res.json({ post, places: [] });
       }
+
+      res.json({ post, places });
     } catch (error) {
       console.error("Error creating post:", error);
       res.status(500).json({ error: "Failed to create post" });
@@ -257,47 +277,143 @@ async function fetchMetadata(url: string): Promise<{
   caption: string | null;
   author: string | null;
   raw: any;
+  error?: string;
 }> {
-  try {
-    let oEmbedUrl = "";
-    let source = "";
+  const source = url.includes("tiktok.com") ? "tiktok" : 
+                 url.includes("instagram.com") ? "instagram" : "unknown";
 
-    if (url.includes("tiktok.com")) {
-      oEmbedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
-      source = "tiktok";
-    } else if (url.includes("instagram.com")) {
-      oEmbedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=YOUR_ACCESS_TOKEN`;
-      source = "instagram";
-    } else {
-      throw new Error("Unsupported URL");
-    }
-
-    const response = await fetch(oEmbedUrl);
-    if (!response.ok) {
-      throw new Error(`oEmbed failed: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
+  if (source === "unknown") {
     return {
-      source,
-      thumbnailUrl: data.thumbnail_url || null,
-      caption: data.title || null,
-      author: data.author_name || data.author_url || null,
-      raw: data,
+      source: "unknown",
+      thumbnailUrl: null,
+      caption: null,
+      author: null,
+      raw: {},
+      error: "Unsupported URL. Please use TikTok or Instagram links.",
     };
+  }
+
+  try {
+    if (source === "tiktok") {
+      return await fetchTikTokMetadata(url);
+    } else {
+      return await fetchInstagramMetadata(url);
+    }
   } catch (error) {
-    console.error("Error fetching metadata:", error);
-    // Fallback to basic info
-    const source = url.includes("tiktok.com") ? "tiktok" : "instagram";
+    console.error(`Error fetching ${source} metadata:`, error);
     return {
       source,
       thumbnailUrl: null,
       caption: null,
       author: null,
       raw: {},
+      error: `Failed to fetch metadata from ${source}. The post may be private or unavailable.`,
     };
   }
+}
+
+// Fetch TikTok metadata using their public oEmbed API
+async function fetchTikTokMetadata(url: string): Promise<{
+  source: string;
+  thumbnailUrl: string | null;
+  caption: string | null;
+  author: string | null;
+  raw: any;
+  error?: string;
+}> {
+  const oEmbedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+  
+  console.log("[oEmbed] Fetching TikTok metadata...");
+  
+  const response = await fetch(oEmbedUrl, {
+    headers: {
+      "User-Agent": "Venturr/1.0",
+      "Accept": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "Unknown error");
+    console.error(`[oEmbed] TikTok failed (${response.status}):`, errorText);
+    throw new Error(`TikTok oEmbed failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log("[oEmbed] TikTok metadata fetched successfully:", {
+    title: data.title?.substring(0, 50),
+    author: data.author_name,
+    hasThumbnail: !!data.thumbnail_url,
+  });
+
+  return {
+    source: "tiktok",
+    thumbnailUrl: data.thumbnail_url || null,
+    caption: data.title || null,
+    author: data.author_name || null,
+    raw: data,
+  };
+}
+
+// Fetch Instagram metadata using Meta's Graph API oEmbed
+async function fetchInstagramMetadata(url: string): Promise<{
+  source: string;
+  thumbnailUrl: string | null;
+  caption: string | null;
+  author: string | null;
+  raw: any;
+  error?: string;
+}> {
+  const appId = process.env.INSTAGRAM_APP_ID;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+
+  if (!appId || !appSecret) {
+    console.warn("[oEmbed] Instagram credentials not configured");
+    return {
+      source: "instagram",
+      thumbnailUrl: null,
+      caption: null,
+      author: null,
+      raw: {},
+      error: "Instagram integration not configured. Please add INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET.",
+    };
+  }
+
+  const accessToken = `${appId}|${appSecret}`;
+  const oEmbedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=${accessToken}`;
+  
+  console.log("[oEmbed] Fetching Instagram metadata...");
+
+  const response = await fetch(oEmbedUrl, {
+    headers: {
+      "Accept": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error(`[oEmbed] Instagram failed (${response.status}):`, errorData);
+    
+    if (response.status === 400 && errorData.error?.message?.includes("Invalid access token")) {
+      throw new Error("Invalid Instagram credentials. Please check your app configuration.");
+    }
+    
+    throw new Error(`Instagram oEmbed failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log("[oEmbed] Instagram metadata fetched successfully:", {
+    title: data.title?.substring(0, 50),
+    author: data.author_name,
+    hasThumbnail: !!data.thumbnail_url,
+  });
+
+  return {
+    source: "instagram",
+    thumbnailUrl: data.thumbnail_url || null,
+    caption: data.title || null,
+    author: data.author_name || null,
+    raw: data,
+  };
 }
 
 // Extract places from text using OpenAI
