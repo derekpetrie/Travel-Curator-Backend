@@ -123,7 +123,7 @@ export function VenturrMap({ places }: VenturrMapProps) {
                 </span>
               )}
               <p className="text-xs text-gray-600 mt-1">
-                {[selectedPlace.city, selectedPlace.country].filter(Boolean).join(', ')}
+                {selectedPlace.addressFull || [selectedPlace.city, selectedPlace.country].filter(Boolean).join(', ')}
               </p>
             </div>
           </Popup>
