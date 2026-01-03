@@ -62,6 +62,21 @@ export function calculateNameSimilarity(name1: string, name2: string): number {
   return Math.max(jaccard, containment * 0.9);
 }
 
+export function calculateHaversineDistance(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export function getMatchRadius(category: string): number {
   // "things to do" gets larger radius (landmarks spread out)
   // "places to eat" and "places to stay" get smaller radius
@@ -114,6 +129,29 @@ export async function findMatchingVenturrPlace(
     );
 
     for (const existing of nearbyPlaces) {
+      if (existing.lat === null || existing.lng === null) continue;
+      
+      // Calculate distance for threshold adjustment
+      const distance = calculateHaversineDistance(
+        candidate.lat, candidate.lng,
+        existing.lat, existing.lng
+      );
+      
+      // For places at nearly identical coordinates (<50m), be more lenient
+      // Just require first word match or containment
+      if (distance < 50) {
+        const candidateFirstWord = candidate.name.toLowerCase().split(/\s+/)[0];
+        const existingFirstWord = existing.name.toLowerCase().split(/\s+/)[0];
+        if (candidateFirstWord === existingFirstWord) {
+          return {
+            matched: true,
+            place: existing,
+            similarity: 0.9, // High confidence for co-located places
+            matchType: 'geo_proximity'
+          };
+        }
+      }
+      
       const similarity = calculateNameSimilarity(candidate.name, existing.name);
       if (similarity >= similarityThreshold) {
         return {

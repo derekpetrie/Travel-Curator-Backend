@@ -218,7 +218,7 @@ export class DatabaseStorage implements IStorage {
         and(
           sql`${venturrPlaces.lat} IS NOT NULL`,
           sql`${venturrPlaces.lng} IS NOT NULL`,
-          sql`${venturrPlaces.placeStatus} = 'active'`,
+          sql`${venturrPlaces.placeStatus} IN ('active', 'needs_review')`,
           category ? eq(venturrPlaces.categoryPrimary, category) : sql`1=1`,
           sql`(
             6371000 * acos(
@@ -249,7 +249,7 @@ export class DatabaseStorage implements IStorage {
   ): Promise<VenturrPlace[]> {
     const conditions = [
       sql`LOWER(${venturrPlaces.city}) = LOWER(${city})`,
-      sql`${venturrPlaces.placeStatus} = 'active'`
+      sql`${venturrPlaces.placeStatus} IN ('active', 'needs_review')`
     ];
     if (country) {
       conditions.push(sql`LOWER(${venturrPlaces.country}) = LOWER(${country})`);
