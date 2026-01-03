@@ -1,0 +1,410 @@
+Below is a clean spec section you can paste into Replit/Lovable. It covers: (1) post → extraction pipeline, (2) Venturr Place database (canonical places), (3) matching/deduping logic, and (4) Google Places enrichment + caching.
+
+---
+
+# Venturr: Post Ingestion → Place Extraction → Canonical Place Database (with Google Places Enrichment)
+
+## Goals
+
+1. Users can save social posts (TikTok/IG/FB/etc.) and Venturr extracts suggested places.
+2. Venturr maintains a **canonical Place database** (“Venturr Places”) that grows over time.
+3. Every newly extracted place is **matched** to an existing Venturr Place when possible, otherwise **creates** a new Place.
+4. Venturr Places are **enriched** via Google Places to improve map accuracy, categories, photos, hours, phone, website, etc.
+5. The map + itinerary always reference **Venturr Places**, not raw extracted strings.
+
+---
+
+## Core Concepts & Entities
+
+### A) Post (saved content item)
+
+Represents a saved URL and the display metadata shown in the app.
+
+**Fields**
+
+* `id`
+* `url` (unique per user OR globally, your choice)
+* `source` (derived from URL: tiktok/instagram/facebook/youtube/web/etc.)
+* `thumbnail_url` (nullable)
+* `author_name` (nullable)
+* `caption_raw` (nullable) — from Iframely fields
+* `caption_user` (nullable) — user supplied
+* `caption_final` = `caption_user ?? caption_raw ?? ""`
+* `fetch_status`: `ok | partial | blocked | error`
+* `visibility_status`: `public | private | unavailable | unknown`
+* `created_at`
+
+### B) ExtractionRun (audit/log per attempt)
+
+Tracks each extraction attempt so you can debug and re-run with improved models.
+
+**Fields**
+
+* `id`
+* `post_id`
+* `extraction_version`
+* `inputs_used`: array of `caption | oembed | html_meta | vision | user_note`
+* `model_used_text`, `model_used_vision`
+* `result_status`: `success | no_places | low_confidence | failed`
+* `warnings`: string[]
+* `raw_output_json` (store full structured output)
+* timestamps
+
+### C) PlaceCandidate (suggested place from extraction)
+
+A “candidate” is not canonical. It’s a suggestion derived from a post.
+
+**Fields**
+
+* `id`
+* `post_id`
+* `extraction_run_id`
+* `name` (string)
+* `category`: `"things to do" | "places to eat" | "places to stay"`
+* `city`, `region`, `country` (nullable)
+* `confidence` (0–1)
+* `lat`, `lng` (nullable)
+* `geocode_confidence` (0–1, nullable)
+* `source_evidence` (snippet / reason)
+* `status`: `suggested | needs_review | confirmed | rejected`
+* `matched_place_id` (nullable) — links to canonical Venturr Place when matched
+
+### D) VenturrPlace (canonical place database)
+
+A canonical place record that the map + itineraries should reference.
+
+**Fields (minimum viable)**
+
+* `id`
+* `name`
+* `display_name` (optional, if you want formatting separate)
+* `category_primary` (Venturr taxonomy: do/eat/stay)
+* `categories_google` (optional list)
+* `address_full` (nullable)
+* `city`, `region`, `postal_code`, `country` (nullable)
+* `lat`, `lng` (nullable but ideally required for “confirmed”)
+* `geo_precision`: `exact | approx | unknown`
+* `place_status`: `active | needs_review | duplicate | closed`
+* `created_at`, `updated_at`
+
+**External IDs / Enrichment**
+
+* `google_place_id` (nullable but preferred)
+* `google_data` (JSON blob cache: hours, phone, website, rating, price_level, photos refs, etc.)
+* `google_fetched_at` timestamp
+* `enrichment_status`: `not_started | pending | enriched | failed`
+
+### E) PostPlaceLink (relationship between a Post and a VenturrPlace)
+
+Represents that a post “mentions” or “contains” a place.
+
+**Fields**
+
+* `id`
+* `post_id`
+* `place_id` (VenturrPlace.id)
+* `place_candidate_id` (optional)
+* `confidence` (from candidate)
+* `link_type`: `extracted | user_added | user_confirmed`
+* timestamps
+
+---
+
+## End-to-End Flow
+
+### 1) Add Post
+
+When a user adds a URL:
+
+1. Fetch metadata via Iframely (thumbnail, title/description, author, etc.).
+2. Store `Post`.
+3. Create an `ExtractionRun` and begin extraction.
+
+**If blocked/private/unavailable:**
+
+* Save `Post` with `fetch_status=blocked` and show UI asking the user to:
+
+  * paste caption OR
+  * add a quick note OR
+  * upload screenshot (optional, if you support it later)
+    Then run extraction from user-provided text.
+
+### 2) Extraction Pipeline (text-first, then vision)
+
+Inputs:
+
+* `caption_final`
+* plus oEmbed/OpenGraph/Twitter meta fields when available
+
+Steps:
+
+1. **Pass A (signal detection):** detect if there are any place/location signals.
+2. **Pass B (structured candidates):** if signals exist but low quality, produce `PlaceCandidate[]` with fields:
+
+   * `name, category, city/region/country, confidence, evidence`
+
+**Vision fallback triggers**
+Only run vision when:
+
+* thumbnail exists AND (caption is empty OR low-info OR Pass A confidence below threshold)
+
+**On 0 places found**
+
+* Save extraction result anyway.
+* UI offers:
+
+  * “Add a quick note → Re-scan”
+  * “Save as inspiration (no map pins)”
+
+### 3) Normalize/Geocode PlaceCandidates
+
+For each candidate:
+
+* Construct a geocoding query string from the best known components:
+
+  * `${name}, ${city}, ${region}, ${country}`
+* Attempt geocode.
+* Save `lat/lng` + `geocode_confidence` + geocode state:
+
+  * `success | ambiguous_needs_user | attempted_failed`
+
+**If ambiguous**
+
+* Keep candidate `needs_review` and don’t auto-pin.
+
+---
+
+## Canonical Place Matching & Deduping (Critical)
+
+### Why
+
+To build your own Place database and avoid duplicates, every candidate or new user-created place must attempt to match an existing VenturrPlace.
+
+### Inputs for Matching
+
+From candidate/user entry:
+
+* normalized name (lowercase, remove punctuation, strip stopwords like “the”, “restaurant”, etc.)
+* location: lat/lng if available; else city/region/country
+* category type (do/eat/stay)
+* google_place_id if already known
+
+### Matching Strategy (Deterministic, tiered)
+
+Run these tiers in order; first “strong match” wins.
+
+#### Tier 1: External ID match (strongest)
+
+* If candidate has `google_place_id` and a VenturrPlace already has that same `google_place_id` → match.
+
+#### Tier 2: Geo-proximity + name similarity (strong)
+
+If candidate has lat/lng:
+
+* Find VenturrPlaces within radius:
+
+  * **Eat/Stay:** 200 meters
+  * **Do:** 500 meters (landmarks spread out more)
+* Compute name similarity (string similarity / token overlap).
+* If similarity ≥ threshold (e.g. 0.85) → match.
+
+#### Tier 3: City-based fuzzy match (medium)
+
+If no lat/lng:
+
+* Search places in same city/region/country by:
+
+  * normalized name similarity ≥ 0.9
+  * category compatible (don’t match “hotel” to “restaurant”)
+* If found → match; else proceed.
+
+#### Tier 4: Manual resolution (when uncertain)
+
+If top two candidates are close and confidence is medium:
+
+* Mark candidate `needs_review`.
+* UI: “Did you mean X or Y?” (or “Create new place”)
+
+### Match Result Handling
+
+When a match is found:
+
+* Set `PlaceCandidate.matched_place_id`
+* Create `PostPlaceLink(post_id, place_id)` with `link_type=extracted`
+* If candidate is high confidence and geocode success:
+
+  * mark candidate as `confirmed`
+
+When no match is found:
+
+* Create new VenturrPlace (see creation rules below)
+* Link it via `PostPlaceLink`
+
+---
+
+## Creating a New VenturrPlace (Rules)
+
+Create a new VenturrPlace when:
+
+* No strong match found, OR
+* User explicitly chooses “Create new place”
+
+**Minimum required to create**
+
+* `name`
+* and either:
+
+  * `lat/lng` OR (city + country)
+
+If you only have name with no location:
+
+* Create as `place_status=needs_review`
+* Exclude from map until user confirms location.
+
+---
+
+## Google Places Enrichment Spec
+
+### Goals of Google Places
+
+* Provide accurate canonical identity (Google Place ID)
+* High-quality geocoding + address components
+* Photos + opening hours + phone + website
+* Ratings/price level (optional display)
+
+### When to Call Google Places
+
+Call Google Places enrichment:
+
+1. **Immediately** after creating a new VenturrPlace (preferred)
+2. When a PlaceCandidate cannot be confidently matched (use Google to disambiguate)
+3. When user views/opens a place and the cached data is stale (TTL refresh)
+4. When geocoding fails using your basic method
+
+### What to Store (Cache + Normalize)
+
+**Store the canonical `google_place_id`** whenever possible.
+Cache the important fields in `VenturrPlace.google_data`:
+
+* formatted address + address components
+* lat/lng
+* types/categories
+* hours
+* phone
+* website
+* rating + total ratings
+* price level (if available)
+* photo references (not raw photos)
+* last fetched timestamp
+
+Also normalize into first-class fields for quick queries:
+
+* `address_full`, `city`, `region`, `postal_code`, `country`, `lat`, `lng`
+
+### API Usage (Implementation-Agnostic)
+
+Use Google Places endpoints in this rough order:
+
+1. **Find Place / Text Search**
+   Input: `${name} ${city/region/country}` (and optionally bias by lat/lng if known)
+   Output: candidates with `place_id` and basic info
+
+2. **Place Details**
+   Input: `place_id`
+   Output: full place data (hours, website, phone, photos, address components, geometry)
+
+### Enrichment Workflow
+
+Given a VenturrPlace with incomplete data:
+
+**Step A: Identify**
+
+* If `google_place_id` exists:
+
+  * fetch Details (respect TTL)
+* Else:
+
+  * call Find Place / Text Search
+  * choose best candidate using:
+
+    * proximity to known lat/lng (if available)
+    * name similarity
+    * category/type compatibility
+  * if confidence is high:
+
+    * set `google_place_id`
+    * fetch Details
+  * else:
+
+    * set `enrichment_status=failed` or `needs_review`
+
+**Step B: Update**
+
+* Update VenturrPlace fields + cache blob
+* Mark `enrichment_status=enriched` and record `google_fetched_at`
+
+### TTL / Refresh
+
+* Default TTL: 30 days for most fields
+* Refresh sooner if user reports incorrect info or if place was created recently with low confidence.
+
+### Rate Limiting / Cost Controls
+
+* Only enrich automatically on:
+
+  * newly created places, and
+  * high-confidence user-confirmed places
+* Defer enrichment for low-confidence candidates until user opens the place detail screen or confirms.
+
+---
+
+## UX Requirements (Minimal but High Impact)
+
+### Candidate Review UI
+
+When `needs_review`:
+
+* Show top matched VenturrPlace options (if any)
+* Show “Create new place”
+* If location ambiguous, show map preview and text search
+
+### “Inspiration” Save
+
+If extraction finds 0 places:
+
+* Allow post to be saved as “Inspiration”
+* Later, user can “Add a place” and trigger matching + enrichment
+
+### Map Hygiene
+
+* Only show VenturrPlaces on the map when:
+
+  * `place_status=active`
+  * `lat/lng` exists
+  * and optionally `geo_precision != unknown`
+
+---
+
+## Acceptance Criteria (What “Done” Means)
+
+1. Adding a post creates a Post record + ExtractionRun.
+2. Extraction produces 0+ PlaceCandidates and saves them.
+3. For each candidate or user-created place:
+
+   * Venturr attempts to match an existing VenturrPlace.
+   * If matched: links Post → Place.
+   * If not: creates a new VenturrPlace and links it.
+4. New VenturrPlaces attempt Google Places enrichment to obtain `google_place_id`, accurate address, and lat/lng.
+5. Duplicate prevention works via:
+
+   * google_place_id matching
+   * proximity + name similarity matching
+6. Places with ambiguous/failed geocoding are stored but not pinned until confirmed.
+
+---
+
+If you want, I can also add:
+
+* a suggested similarity algorithm (tokenization + Jaro-Winkler/Levenshtein style scoring)
+* exact radii/threshold defaults per category
+* a “merge duplicates” admin/backoffice flow (super useful once your database grows)
