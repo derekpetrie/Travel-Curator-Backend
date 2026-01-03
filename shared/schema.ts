@@ -57,6 +57,10 @@ export const venturrPlaces = pgTable("venturr_places", {
   lng: real("lng"),
   geoPrecision: text("geo_precision").default("unknown"), // "exact" | "approx" | "unknown"
   placeStatus: text("place_status").default("active").notNull(), // "active" | "needs_review" | "duplicate" | "closed"
+  // Foursquare enrichment
+  fsqId: text("fsq_id"),
+  fsqData: jsonb("fsq_data"), // FoursquareEnrichmentData
+  fsqFetchedAt: timestamp("fsq_fetched_at"),
   // Future Google Places enrichment
   googlePlaceId: text("google_place_id"),
   googleData: jsonb("google_data"),

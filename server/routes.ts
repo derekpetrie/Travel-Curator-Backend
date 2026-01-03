@@ -513,6 +513,63 @@ export async function registerRoutes(
     }
   });
 
+  // Enrich a place with Foursquare data
+  app.post("/api/places/:id/enrich", isAuthenticated, async (req, res) => {
+    try {
+      const placeId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      // Get the VenturrPlace
+      const place = await storage.getVenturrPlace(placeId);
+      if (!place) {
+        return res.status(404).json({ error: "Place not found" });
+      }
+      
+      // Check if already enriched and not stale (7 days)
+      if (place.fsqFetchedAt) {
+        const daysSinceFetch = (Date.now() - place.fsqFetchedAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceFetch < 7 && place.enrichmentStatus === 'enriched') {
+          return res.json({ 
+            success: true, 
+            cached: true,
+            place 
+          });
+        }
+      }
+      
+      // Import and call Foursquare enrichment
+      const { findAndEnrichPlace } = await import("./lib/foursquare");
+      const enrichmentData = await findAndEnrichPlace(place);
+      
+      if (!enrichmentData) {
+        await storage.updateVenturrPlace(placeId, {
+          enrichmentStatus: 'failed'
+        });
+        return res.json({ 
+          success: false, 
+          error: "Could not find matching place on Foursquare" 
+        });
+      }
+      
+      // Update the place with enrichment data
+      const updatedPlace = await storage.updateVenturrPlace(placeId, {
+        fsqId: enrichmentData.fsqId,
+        fsqData: enrichmentData,
+        fsqFetchedAt: new Date(),
+        enrichmentStatus: 'enriched'
+      });
+      
+      res.json({ 
+        success: true, 
+        cached: false,
+        place: updatedPlace 
+      });
+    } catch (error) {
+      console.error("Error enriching place:", error);
+      res.status(500).json({ error: "Failed to enrich place" });
+    }
+  });
+
   // Update place category
   app.patch("/api/places/:id/category", isAuthenticated, async (req, res) => {
     try {
