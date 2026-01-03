@@ -20,6 +20,7 @@ export interface IStorage {
   // Posts
   getPosts(collectionId: number): Promise<Post[]>;
   getPost(id: number): Promise<Post | undefined>;
+  postExistsInCollection(collectionId: number, url: string): Promise<boolean>;
   createPost(post: InsertPost): Promise<Post>;
   deletePost(id: number): Promise<void>;
   
@@ -96,6 +97,13 @@ export class DatabaseStorage implements IStorage {
   async getPost(id: number): Promise<Post | undefined> {
     const result = await db.select().from(posts).where(eq(posts.id, id));
     return result[0];
+  }
+
+  async postExistsInCollection(collectionId: number, url: string): Promise<boolean> {
+    const result = await db.select({ id: posts.id }).from(posts)
+      .where(and(eq(posts.collectionId, collectionId), eq(posts.url, url)))
+      .limit(1);
+    return result.length > 0;
   }
 
   async createPost(post: InsertPost): Promise<Post> {

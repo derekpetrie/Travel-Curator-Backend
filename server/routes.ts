@@ -227,7 +227,14 @@ export async function registerRoutes(
   app.post("/api/collections/:collectionId/posts", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);
+      const userId = getUserId(req);
       const { url, manualCaption } = req.body;
+
+      // Verify collection belongs to user
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
 
       if (!url) {
         return res.status(400).json({ error: "URL is required" });
@@ -240,6 +247,15 @@ export async function registerRoutes(
       if (!isTikTok && !isInstagram) {
         return res.status(400).json({ 
           error: "Unsupported URL. Please use TikTok or Instagram links." 
+        });
+      }
+
+      // Check for duplicate URL in this collection
+      const urlExists = await storage.postExistsInCollection(collectionId, url);
+      if (urlExists) {
+        return res.status(400).json({ 
+          error: "This link has already been saved to this Venturr.",
+          isDuplicate: true
         });
       }
 
