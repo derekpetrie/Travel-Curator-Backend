@@ -436,8 +436,11 @@ export async function registerRoutes(
         lng: vp.lng,
         confidence: null,
         createdAt: vp.createdAt,
-        // Include VenturrPlace ID for future use
+        // Include VenturrPlace ID and enrichment data
         venturrPlaceId: vp.id,
+        fsqId: vp.fsqId,
+        fsqData: vp.fsqData,
+        enrichmentStatus: vp.enrichmentStatus,
       }));
       
       res.json(places);
@@ -472,8 +475,11 @@ export async function registerRoutes(
         lng: vp.lng,
         confidence: vp.confidence,
         createdAt: vp.createdAt,
-        // Include VenturrPlace ID for future use
+        // Include VenturrPlace ID and enrichment data
         venturrPlaceId: vp.id,
+        fsqId: vp.fsqId,
+        fsqData: vp.fsqData,
+        enrichmentStatus: vp.enrichmentStatus,
       }));
       
       res.json(places);
@@ -514,13 +520,23 @@ export async function registerRoutes(
   });
 
   // Enrich a place with Foursquare data
-  app.post("/api/places/:id/enrich", isAuthenticated, async (req, res) => {
+  // Accepts venturrPlaceId in body since frontend knows both linkId and venturrPlaceId
+  app.post("/api/places/:venturrPlaceId/enrich", isAuthenticated, async (req, res) => {
     try {
-      const placeId = parseInt(req.params.id);
+      const venturrPlaceId = parseInt(req.params.venturrPlaceId);
       const userId = getUserId(req);
       
+      // Verify user has access to this place through a PostPlaceLink
+      // This is done by checking if any of the user's posts link to this place
+      const userPlaces = await storage.getPlacesForUser(userId);
+      const hasAccess = userPlaces.some(p => p.id === venturrPlaceId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Not authorized to enrich this place" });
+      }
+      
       // Get the VenturrPlace
-      const place = await storage.getVenturrPlace(placeId);
+      const place = await storage.getVenturrPlace(venturrPlaceId);
       if (!place) {
         return res.status(404).json({ error: "Place not found" });
       }
@@ -542,7 +558,7 @@ export async function registerRoutes(
       const enrichmentData = await findAndEnrichPlace(place);
       
       if (!enrichmentData) {
-        await storage.updateVenturrPlace(placeId, {
+        await storage.updateVenturrPlace(venturrPlaceId, {
           enrichmentStatus: 'failed'
         });
         return res.json({ 
@@ -552,7 +568,7 @@ export async function registerRoutes(
       }
       
       // Update the place with enrichment data
-      const updatedPlace = await storage.updateVenturrPlace(placeId, {
+      const updatedPlace = await storage.updateVenturrPlace(venturrPlaceId, {
         fsqId: enrichmentData.fsqId,
         fsqData: enrichmentData,
         fsqFetchedAt: new Date(),

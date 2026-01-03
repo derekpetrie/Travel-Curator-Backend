@@ -237,7 +237,7 @@ export default function VenturrDetail() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : places.length > 0 ? (
-              places.map(place => <PlaceCard key={place.id} place={place} />)
+              places.map(place => <PlaceCard key={place.id} place={place} collectionId={collectionId} />)
             ) : (
               <EmptyState type="places" />
             )}
