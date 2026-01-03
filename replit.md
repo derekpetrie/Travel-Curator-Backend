@@ -104,6 +104,9 @@ Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion
 - Be transparent about AI (label AI-suggested content)
 
 ## Recent Changes
+- 2026-01-03: Automatic place enrichment on creation (no manual sparkle button needed)
+- 2026-01-03: Flattened Foursquare fields in VenturrPlace schema (photoUrl, rating, website, phone, hoursDisplay, isOpenNow, priceLevel)
+- 2026-01-03: Redesigned PlaceCard with compact horizontal layout (photo thumbnail, rating, hours, expandable details)
 - 2026-01-03: Foursquare Places API integration for place enrichment (photos, ratings, hours, price)
 - 2026-01-03: Updated to new Foursquare API (places-api.foursquare.com with Bearer auth)
 - 2026-01-02: Applied Venturr Design System v1.0 (new color palette, typography, app icon)

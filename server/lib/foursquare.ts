@@ -1,4 +1,5 @@
 import { VenturrPlace } from "@shared/schema";
+import { storage } from "../storage";
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const BASE_URL = "https://places-api.foursquare.com";
@@ -244,4 +245,79 @@ export async function findAndEnrichPlace(
     console.error(`[Foursquare] Error enriching place ${place.name}:`, error);
     return null;
   }
+}
+
+const ENRICHMENT_CACHE_DAYS = 7;
+
+export async function enrichPlaceAndSave(placeId: number): Promise<boolean> {
+  const place = await storage.getVenturrPlace(placeId);
+  if (!place) {
+    console.log(`[Foursquare] Place not found: ${placeId}`);
+    return false;
+  }
+
+  // Check if recently enriched (cache)
+  if (place.fsqFetchedAt) {
+    const cacheAge = Date.now() - new Date(place.fsqFetchedAt).getTime();
+    const cacheDays = cacheAge / (1000 * 60 * 60 * 24);
+    if (cacheDays < ENRICHMENT_CACHE_DAYS && place.enrichmentStatus === 'enriched') {
+      console.log(`[Foursquare] Using cached data for "${place.name}" (${cacheDays.toFixed(1)} days old)`);
+      return true;
+    }
+  }
+
+  // Mark as pending
+  await storage.updateVenturrPlace(placeId, { enrichmentStatus: 'pending' });
+
+  try {
+    const enrichmentData = await findAndEnrichPlace(place);
+
+    if (!enrichmentData) {
+      await storage.updateVenturrPlace(placeId, { 
+        enrichmentStatus: 'failed',
+        fsqFetchedAt: new Date()
+      });
+      return false;
+    }
+
+    // Extract first photo URL if available
+    const photoUrl = enrichmentData.photos.length > 0 ? enrichmentData.photos[0].url : null;
+
+    // Save flattened fields + JSON blob
+    await storage.updateVenturrPlace(placeId, {
+      fsqId: enrichmentData.fsqId,
+      fsqData: enrichmentData,
+      fsqFetchedAt: new Date(),
+      photoUrl,
+      rating: enrichmentData.rating ?? null,
+      website: enrichmentData.website ?? null,
+      phone: enrichmentData.phone ?? null,
+      hoursDisplay: enrichmentData.hours?.display ?? null,
+      isOpenNow: enrichmentData.hours?.openNow ?? null,
+      priceLevel: enrichmentData.price ?? null,
+      addressFull: enrichmentData.address ?? place.addressFull,
+      enrichmentStatus: 'enriched'
+    });
+
+    console.log(`[Foursquare] Successfully enriched "${place.name}" with photo, rating, hours, etc.`);
+    return true;
+  } catch (error) {
+    console.error(`[Foursquare] Error enriching place ${place.name}:`, error);
+    await storage.updateVenturrPlace(placeId, { 
+      enrichmentStatus: 'failed',
+      fsqFetchedAt: new Date()
+    });
+    return false;
+  }
+}
+
+export async function enrichPlaceAsync(placeId: number): Promise<void> {
+  // Fire and forget - don't block the response
+  setImmediate(async () => {
+    try {
+      await enrichPlaceAndSave(placeId);
+    } catch (error) {
+      console.error(`[Foursquare] Async enrichment failed for place ${placeId}:`, error);
+    }
+  });
 }

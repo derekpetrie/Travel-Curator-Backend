@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, real, jsonb, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, real, jsonb, integer, serial, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -59,8 +59,16 @@ export const venturrPlaces = pgTable("venturr_places", {
   placeStatus: text("place_status").default("active").notNull(), // "active" | "needs_review" | "duplicate" | "closed"
   // Foursquare enrichment
   fsqId: text("fsq_id"),
-  fsqData: jsonb("fsq_data"), // FoursquareEnrichmentData
+  fsqData: jsonb("fsq_data"), // FoursquareEnrichmentData (full JSON for less-used fields)
   fsqFetchedAt: timestamp("fsq_fetched_at"),
+  // Flattened Foursquare fields for common display
+  photoUrl: text("photo_url"),
+  rating: real("rating"),
+  website: text("website"),
+  phone: text("phone"),
+  hoursDisplay: text("hours_display"), // e.g. "Mon-Fri 9am-5pm"
+  isOpenNow: boolean("is_open_now"),
+  priceLevel: integer("price_level"), // 1-4
   // Future Google Places enrichment
   googlePlaceId: text("google_place_id"),
   googleData: jsonb("google_data"),

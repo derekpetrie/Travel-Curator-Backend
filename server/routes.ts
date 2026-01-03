@@ -7,6 +7,7 @@ import { OpenAI } from "openai";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { generateCollectionThumbnail } from "./lib/thumbnail";
 import { matchOrCreateVenturrPlace } from "./lib/place-matching";
+import { enrichPlaceAsync } from "./lib/foursquare";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 
 const objectStorageService = new ObjectStorageService();
@@ -353,6 +354,9 @@ export async function registerRoutes(
 
             venturrPlaces.push(venturrPlace);
             console.log(`[Extraction] Linked post ${post.id} to VenturrPlace ${venturrPlace.id} (${isNew ? 'new' : matchType})`);
+            
+            // Trigger async enrichment (fire and forget - won't block response)
+            enrichPlaceAsync(venturrPlace.id);
           } catch (err) {
             console.error(`[Extraction] Error matching/creating place "${extractedPlace.name}":`, err);
           }
@@ -441,6 +445,15 @@ export async function registerRoutes(
         fsqId: vp.fsqId,
         fsqData: vp.fsqData,
         enrichmentStatus: vp.enrichmentStatus,
+        // Flattened Foursquare fields
+        photoUrl: vp.photoUrl,
+        rating: vp.rating,
+        website: vp.website,
+        phone: vp.phone,
+        hoursDisplay: vp.hoursDisplay,
+        isOpenNow: vp.isOpenNow,
+        priceLevel: vp.priceLevel,
+        addressFull: vp.addressFull,
       }));
       
       res.json(places);
@@ -480,6 +493,15 @@ export async function registerRoutes(
         fsqId: vp.fsqId,
         fsqData: vp.fsqData,
         enrichmentStatus: vp.enrichmentStatus,
+        // Flattened Foursquare fields
+        photoUrl: vp.photoUrl,
+        rating: vp.rating,
+        website: vp.website,
+        phone: vp.phone,
+        hoursDisplay: vp.hoursDisplay,
+        isOpenNow: vp.isOpenNow,
+        priceLevel: vp.priceLevel,
+        addressFull: vp.addressFull,
       }));
       
       res.json(places);
@@ -519,77 +541,10 @@ export async function registerRoutes(
     }
   });
 
-  // Enrich a place with Foursquare data
-  // Accepts venturrPlaceId in body since frontend knows both linkId and venturrPlaceId
-  app.post("/api/places/:venturrPlaceId/enrich", isAuthenticated, async (req, res) => {
-    try {
-      const venturrPlaceId = parseInt(req.params.venturrPlaceId);
-      const userId = getUserId(req);
-      
-      // Verify user has access to this place through a PostPlaceLink
-      // This is done by checking if any of the user's posts link to this place
-      const userPlaces = await storage.getPlacesForUser(userId);
-      const hasAccess = userPlaces.some(p => p.id === venturrPlaceId);
-      
-      if (!hasAccess) {
-        return res.status(403).json({ error: "Not authorized to enrich this place" });
-      }
-      
-      // Get the VenturrPlace
-      const place = await storage.getVenturrPlace(venturrPlaceId);
-      if (!place) {
-        return res.status(404).json({ error: "Place not found" });
-      }
-      
-      // Check if already enriched and not stale (7 days)
-      if (place.fsqFetchedAt) {
-        const daysSinceFetch = (Date.now() - place.fsqFetchedAt.getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceFetch < 7 && place.enrichmentStatus === 'enriched') {
-          return res.json({ 
-            success: true, 
-            cached: true,
-            place 
-          });
-        }
-      }
-      
-      // Import and call Foursquare enrichment
-      const { findAndEnrichPlace } = await import("./lib/foursquare");
-      const enrichmentData = await findAndEnrichPlace(place);
-      
-      if (!enrichmentData) {
-        await storage.updateVenturrPlace(venturrPlaceId, {
-          enrichmentStatus: 'failed'
-        });
-        return res.json({ 
-          success: false, 
-          error: "Could not find matching place on Foursquare" 
-        });
-      }
-      
-      // Update the place with enrichment data
-      const updatedPlace = await storage.updateVenturrPlace(venturrPlaceId, {
-        fsqId: enrichmentData.fsqId,
-        fsqData: enrichmentData,
-        fsqFetchedAt: new Date(),
-        enrichmentStatus: 'enriched'
-      });
-      
-      res.json({ 
-        success: true, 
-        cached: false,
-        place: updatedPlace 
-      });
-    } catch (error) {
-      console.error("Error enriching place:", error);
-      res.status(500).json({ error: "Failed to enrich place" });
-    }
-  });
-
-  // Update place category
+  // Update place category (uses linkId from frontend, updates VenturrPlace.categoryPrimary)
   app.patch("/api/places/:id/category", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const linkId = parseInt(req.params.id);
       const userId = getUserId(req);
       const { category } = req.body;
       
@@ -601,19 +556,23 @@ export async function registerRoutes(
         });
       }
       
-      // Get the place to verify ownership through collection
-      const place = await storage.getPlace(id);
-      if (!place) {
-        return res.status(404).json({ error: "Place not found" });
+      // Get the PostPlaceLink to find the VenturrPlace and verify ownership
+      const linkWithOwnership = await storage.getPostPlaceLinkWithOwnership(linkId, userId);
+      if (!linkWithOwnership) {
+        return res.status(404).json({ error: "Place not found or not authorized" });
       }
       
-      // Verify the place belongs to a collection owned by this user
-      const collection = await storage.getCollection(place.collectionId, userId);
-      if (!collection) {
-        return res.status(403).json({ error: "Not authorized to modify this place" });
-      }
+      // Update the VenturrPlace's categoryPrimary
+      await storage.updateVenturrPlace(linkWithOwnership.link.placeId, {
+        categoryPrimary: category.toLowerCase()
+      });
       
-      await storage.updatePlaceCategory(id, category.toLowerCase());
+      // Also update legacy place for backward compatibility
+      try {
+        await storage.updatePlaceCategory(linkId, category.toLowerCase());
+      } catch (e) {
+        // Ignore if legacy place doesn't exist
+      }
       
       res.json({ success: true, category: category.toLowerCase() });
     } catch (error) {
