@@ -22,6 +22,10 @@ interface GooglePlace {
     languageCode: string;
   };
   formattedAddress?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
   rating?: number;
   userRatingCount?: number;
   priceLevel?: string;
@@ -41,6 +45,8 @@ export interface GoogleEnrichmentData {
   googlePlaceId: string;
   name: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   rating?: number;
   userRatingCount?: number;
   priceLevel?: number;
@@ -129,6 +135,7 @@ export async function getPlaceDetails(placeId: string): Promise<GooglePlace | nu
     "id",
     "displayName",
     "formattedAddress",
+    "location",
     "rating",
     "userRatingCount",
     "priceLevel",
@@ -195,6 +202,8 @@ export async function findAndEnrichPlace(
       googlePlaceId: details.id,
       name: details.displayName?.text || place.name,
       address: details.formattedAddress,
+      lat: details.location?.latitude,
+      lng: details.location?.longitude,
       rating: details.rating,
       userRatingCount: details.userRatingCount,
       priceLevel: parsePriceLevel(details.priceLevel),
@@ -248,6 +257,8 @@ export async function enrichPlaceWithGoogle(placeId: number): Promise<boolean> {
       googlePlaceId: enrichmentData.googlePlaceId,
       googleData: enrichmentData,
       googleFetchedAt: new Date(),
+      lat: enrichmentData.lat ?? place.lat,
+      lng: enrichmentData.lng ?? place.lng,
       photoUrl: enrichmentData.photoUrl ?? place.photoUrl,
       rating: enrichmentData.rating ?? place.rating,
       website: enrichmentData.website ?? place.website,

@@ -121,6 +121,22 @@ export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Post = typeof posts.$inferSelect;
 export type InsertPost = z.infer<typeof insertPostSchema>;
 export type Place = typeof places.$inferSelect;
+
+// Extended Place type for API responses that include VenturrPlace enrichment data
+export type PlaceWithEnrichment = Place & {
+  venturrPlaceId?: number;
+  fsqId?: string | null;
+  fsqData?: unknown;
+  enrichmentStatus?: string;
+  photoUrl?: string | null;
+  rating?: number | null;
+  website?: string | null;
+  phone?: string | null;
+  hoursDisplay?: string | null;
+  isOpenNow?: boolean | null;
+  priceLevel?: number | null;
+  addressFull?: string | null;
+};
 export type InsertPlace = z.infer<typeof insertPlaceSchema>;
 export type VenturrPlace = typeof venturrPlaces.$inferSelect;
 export type InsertVenturrPlace = z.infer<typeof insertVenturrPlaceSchema>;

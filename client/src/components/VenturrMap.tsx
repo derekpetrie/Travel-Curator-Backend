@@ -4,15 +4,15 @@ import maplibregl, { LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapPin } from 'lucide-react';
 import { useState } from 'react';
-import type { Place } from '@shared/schema';
+import type { PlaceWithEnrichment } from '@shared/schema';
 
 interface VenturrMapProps {
-  places: Place[];
+  places: PlaceWithEnrichment[];
 }
 
 export function VenturrMap({ places }: VenturrMapProps) {
   const mapRef = useRef<any>(null);
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceWithEnrichment | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   const validPlaces = places.filter(p => p.lat !== null && p.lng !== null);
@@ -51,7 +51,7 @@ export function VenturrMap({ places }: VenturrMapProps) {
     zoom: 2,
   };
 
-  const handleMarkerClick = useCallback((place: Place) => {
+  const handleMarkerClick = useCallback((place: PlaceWithEnrichment) => {
     setSelectedPlace(place);
     if (mapRef.current && place.lat && place.lng) {
       mapRef.current.flyTo({
