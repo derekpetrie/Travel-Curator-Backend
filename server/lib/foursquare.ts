@@ -315,7 +315,23 @@ export async function enrichPlaceAsync(placeId: number): Promise<void> {
   // Fire and forget - don't block the response
   setImmediate(async () => {
     try {
-      await enrichPlaceAndSave(placeId);
+      const success = await enrichPlaceAndSave(placeId);
+      
+      // If Foursquare failed, try Google Places as fallback
+      if (!success) {
+        console.log(`[Enrichment] Foursquare failed for place ${placeId}, trying Google Places...`);
+        try {
+          const { enrichPlaceWithGoogle } = await import('./google-places');
+          const googleSuccess = await enrichPlaceWithGoogle(placeId);
+          if (googleSuccess) {
+            console.log(`[Enrichment] Google Places succeeded for place ${placeId}`);
+          } else {
+            console.log(`[Enrichment] Google Places also failed for place ${placeId}`);
+          }
+        } catch (googleError) {
+          console.error(`[Enrichment] Google Places fallback error for place ${placeId}:`, googleError);
+        }
+      }
     } catch (error) {
       console.error(`[Foursquare] Async enrichment failed for place ${placeId}:`, error);
     }

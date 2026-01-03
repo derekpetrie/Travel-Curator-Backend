@@ -581,6 +581,41 @@ export async function registerRoutes(
     }
   });
 
+  // Re-enrich a place (retry Foursquare + Google Places)
+  app.post("/api/places/:id/enrich", isAuthenticated, async (req, res) => {
+    try {
+      const linkId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      // Verify ownership
+      const linkWithOwnership = await storage.getPostPlaceLinkWithOwnership(linkId, userId);
+      if (!linkWithOwnership) {
+        return res.status(404).json({ error: "Place not found or not authorized" });
+      }
+      
+      const venturrPlaceId = linkWithOwnership.link.placeId;
+      
+      // Reset enrichment status and try again
+      await storage.updateVenturrPlace(venturrPlaceId, {
+        enrichmentStatus: 'pending',
+        fsqId: null,
+        fsqData: null,
+        fsqFetchedAt: null,
+        googlePlaceId: null,
+        googleData: null,
+        googleFetchedAt: null,
+      });
+      
+      // Trigger async enrichment (Foursquare first, then Google fallback)
+      enrichPlaceAsync(venturrPlaceId);
+      
+      res.json({ success: true, message: "Enrichment started" });
+    } catch (error) {
+      console.error("Error re-enriching place:", error);
+      res.status(500).json({ error: "Failed to re-enrich place" });
+    }
+  });
+
   return httpServer;
 }
 
