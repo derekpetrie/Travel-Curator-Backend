@@ -318,26 +318,30 @@ export async function enrichPlaceAsync(placeId: number): Promise<void> {
   // Fire and forget - don't block the response
   setImmediate(async () => {
     try {
-      // Try Foursquare first
-      const fsqSuccess = await enrichPlaceAndSave(placeId);
-      if (fsqSuccess) {
-        console.log(`[Enrichment] Foursquare succeeded for place ${placeId}`);
-      }
-      
-      // Always try Google Places too - it has better coordinates and additional data
+      // Try Google Places FIRST (primary source - better data quality)
+      let googleSuccess = false;
       try {
         const { enrichPlaceWithGoogle } = await import('./google-places');
-        const googleSuccess = await enrichPlaceWithGoogle(placeId);
+        googleSuccess = await enrichPlaceWithGoogle(placeId);
         if (googleSuccess) {
           console.log(`[Enrichment] Google Places succeeded for place ${placeId}`);
-        } else if (!fsqSuccess) {
-          console.log(`[Enrichment] Both Foursquare and Google Places failed for place ${placeId}`);
         }
       } catch (googleError) {
         console.error(`[Enrichment] Google Places error for place ${placeId}:`, googleError);
       }
+      
+      // Only try Foursquare as FALLBACK if Google failed (saves API costs)
+      if (!googleSuccess) {
+        console.log(`[Enrichment] Google failed, trying Foursquare fallback for place ${placeId}...`);
+        const fsqSuccess = await enrichPlaceAndSave(placeId);
+        if (fsqSuccess) {
+          console.log(`[Enrichment] Foursquare fallback succeeded for place ${placeId}`);
+        } else {
+          console.log(`[Enrichment] Both Google Places and Foursquare failed for place ${placeId}`);
+        }
+      }
     } catch (error) {
-      console.error(`[Foursquare] Async enrichment failed for place ${placeId}:`, error);
+      console.error(`[Enrichment] Async enrichment failed for place ${placeId}:`, error);
     }
   });
 }
