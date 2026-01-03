@@ -1,7 +1,7 @@
 import { VenturrPlace } from "@shared/schema";
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
-const BASE_URL = "https://api.foursquare.com/v3";
+const BASE_URL = "https://places-api.foursquare.com";
 
 interface FoursquarePhoto {
   id: string;
@@ -24,7 +24,8 @@ interface FoursquareHours {
 }
 
 interface FoursquarePlace {
-  fsq_id: string;
+  fsq_place_id: string;
+  fsq_id?: string; // Legacy field, may still be present
   name: string;
   location: {
     address?: string;
@@ -36,6 +37,8 @@ interface FoursquarePlace {
     postcode?: string;
     region?: string;
   };
+  latitude?: number;
+  longitude?: number;
   geocodes?: {
     main?: {
       latitude: number;
@@ -43,11 +46,11 @@ interface FoursquarePlace {
     };
   };
   categories?: Array<{
-    id: number;
+    id: string | number;
     name: string;
-    short_name: string;
-    plural_name: string;
-    icon: {
+    short_name?: string;
+    plural_name?: string;
+    icon?: {
       prefix: string;
       suffix: string;
     };
@@ -101,7 +104,7 @@ function getHeaders(): Record<string, string> {
   }
   return {
     Accept: "application/json",
-    Authorization: FOURSQUARE_API_KEY,
+    Authorization: `Bearer ${FOURSQUARE_API_KEY}`,
     "X-Places-Api-Version": "2025-06-17",
   };
 }
@@ -122,7 +125,7 @@ export async function searchPlaces(
     ll: `${lat},${lng}`,
     radius: radius.toString(),
     limit: limit.toString(),
-    fields: "fsq_id,name,location,geocodes,categories,distance,rating,price",
+    fields: "fsq_place_id,name,location,latitude,longitude,categories,distance,rating,price",
   });
 
   const response = await fetch(`${BASE_URL}/places/search?${params}`, {
@@ -141,10 +144,11 @@ export async function searchPlaces(
 
 export async function getPlaceDetails(fsqId: string): Promise<FoursquarePlace | null> {
   const fields = [
-    "fsq_id",
+    "fsq_place_id",
     "name",
     "location",
-    "geocodes",
+    "latitude",
+    "longitude",
     "categories",
     "rating",
     "price",
@@ -196,15 +200,22 @@ export async function findAndEnrichPlace(
     }
 
     const bestMatch = searchResults[0];
+    const bestMatchId = bestMatch.fsq_place_id || bestMatch.fsq_id;
     console.log(`[Foursquare] Found match: "${bestMatch.name}" for "${place.name}" (distance: ${bestMatch.distance}m)`);
 
-    const details = await getPlaceDetails(bestMatch.fsq_id);
+    if (!bestMatchId) {
+      console.log(`[Foursquare] No place ID found for: ${place.name}`);
+      return null;
+    }
+
+    const details = await getPlaceDetails(bestMatchId);
     if (!details) {
       return null;
     }
 
+    const detailsId = details.fsq_place_id || details.fsq_id || bestMatchId;
     const enrichmentData: FoursquareEnrichmentData = {
-      fsqId: details.fsq_id,
+      fsqId: detailsId,
       name: details.name,
       address: details.location?.formatted_address,
       rating: details.rating,
