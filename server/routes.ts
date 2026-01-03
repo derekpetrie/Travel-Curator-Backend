@@ -14,11 +14,11 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-// Valid place categories
+// Valid place categories (simplified to 3)
 const PLACE_CATEGORIES = [
-  'restaurant', 'cafe', 'bar', 'nightlife', 'hotel', 'beach', 'attraction',
-  'nature', 'park', 'landmark', 'museum', 'shopping', 'activity', 'wellness',
-  'neighborhood', 'skiing', 'theme park', 'other'
+  'things to do',
+  'places to eat', 
+  'places to stay'
 ] as const;
 
 // Helper to get userId from request
@@ -598,9 +598,12 @@ IMPORTANT RULES:
 
 For each place you can identify, provide:
 - name: The specific venue/landmark name
-- city: The city (if you can determine it)
+- city: The city (if you can determine it). IMPORTANT: For US locations, include the state (e.g., "Austin, Texas")
 - country: The country (if you can determine it)
-- category: One of: restaurant, cafe, bar, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, sports, entertainment, other
+- category: One of these THREE categories only:
+  * "things to do" - attractions, landmarks, activities, nature, parks, museums, tours, entertainment, sports venues
+  * "places to eat" - restaurants, cafes, bars, food markets, bakeries
+  * "places to stay" - hotels, resorts, hostels, vacation rentals, accommodations
 - confidence: A score from 0 to 1 (use 0.7+ only for places you're certain about)
 
 Return your response as JSON with a "places" array. If you cannot identify any specific places, return {"places": []}.
@@ -664,9 +667,8 @@ async function extractPlacesFromText(text: string): Promise<Array<{
 
 IMPORTANT RULES:
 1. Extract the ACTUAL VENUE, not team/brand names. For sports teams, extract their stadium/arena with the experience:
-   - "Chelsea FC match" → name: "Stamford Bridge - Chelsea FC Match", category: "sports"
-   - "Lakers game" → name: "Crypto.com Arena - Lakers Game", category: "sports"
-   - "Manchester United" → name: "Old Trafford - Manchester United Match", category: "sports"
+   - "Chelsea FC match" → name: "Stamford Bridge - Chelsea FC Match"
+   - "Lakers game" → name: "Crypto.com Arena - Lakers Game"
 2. Include the ACTIVITY in the name when it's the main draw (e.g., "Borough Market - Food Tour", "Thames - River Cruise")
 3. Only extract places someone can physically visit - skip abstract concepts, brands, or online services
 4. When uncertain if something is a real visitable place, set confidence below 0.5
@@ -675,16 +677,11 @@ For each place, provide:
 - name: The venue name, optionally with the activity/experience (e.g., "Stamford Bridge - Chelsea FC Match")
 - city: The city or region. IMPORTANT: For US locations, you MUST include the state name (e.g., "Summit County, Colorado" or "Austin, Texas" - NEVER just "Summit County" or "Austin")
 - country: The country (if mentioned or can be inferred)
-- category: One of: restaurant, cafe, bar, nightlife, hotel, beach, attraction, nature, park, landmark, museum, shopping, activity, wellness, neighborhood, skiing, theme park, sports, entertainment, other
+- category: One of these THREE categories only:
+  * "things to do" - attractions, landmarks, activities, nature, parks, museums, tours, entertainment, sports venues, beaches, hiking, skiing, theme parks
+  * "places to eat" - restaurants, cafes, bars, food markets, bakeries, nightlife venues
+  * "places to stay" - hotels, resorts, hostels, vacation rentals, accommodations
 - confidence: A score from 0 to 1 indicating how confident you are this is a real visitable place
-
-Category guidance:
-- Use "sports" for stadiums, arenas, and sporting events
-- Use "entertainment" for concerts, shows, theaters, comedy clubs
-- Use "attraction" for developed tourist sites with paid admission (caves, observation decks, aquariums, zoos)
-- Use "nature" for natural outdoor areas (forests, trails, lakes, mountains)
-- Use "landmark" for iconic recognizable structures or monuments
-- Use "activity" for experiences like tours, classes, or adventure activities
 
 Text: "${text}"
 
@@ -873,10 +870,9 @@ async function recategorizePlace(
     const prompt = `Categorize this travel place into exactly one of these categories: ${PLACE_CATEGORIES.join(', ')}.
 
 Category guidance:
-- Use "attraction" for developed tourist sites with paid admission or guided tours (caves, observation decks, aquariums, zoos, etc.)
-- Use "nature" for natural outdoor areas without significant development
-- Use "landmark" for iconic recognizable structures or monuments
-- Use "activity" for experiences like tours, classes, or adventure activities
+- Use "things to do" for attractions, landmarks, activities, nature, parks, museums, tours, entertainment, sports venues, beaches, hiking, skiing, theme parks
+- Use "places to eat" for restaurants, cafes, bars, food markets, bakeries, nightlife venues
+- Use "places to stay" for hotels, resorts, hostels, vacation rentals, accommodations
 
 Place: ${locationInfo}
 

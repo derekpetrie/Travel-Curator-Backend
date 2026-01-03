@@ -64,9 +64,10 @@ export default function ExploreScreen() {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = Array.from(
-    new Set(validPlaces.map(p => p.category).filter(Boolean))
-  ) as string[];
+  // Fixed category order for consistent display
+  const CATEGORY_ORDER = ['things to do', 'places to eat', 'places to stay'];
+  const availableCategories = new Set(validPlaces.map(p => p.category).filter(Boolean));
+  const categories = CATEGORY_ORDER.filter(c => availableCategories.has(c));
 
   const getCollectionName = (collectionId: number) => {
     const collection = collections.find(c => c.id === collectionId);
