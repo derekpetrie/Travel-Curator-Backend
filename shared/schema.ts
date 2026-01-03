@@ -28,6 +28,7 @@ export const posts = pgTable("posts", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
+// Legacy places table - will be migrated to venturr_places + post_place_links
 export const places = pgTable("places", {
   id: serial("id").primaryKey(),
   collectionId: integer("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
@@ -38,6 +39,41 @@ export const places = pgTable("places", {
   lat: real("lat"),
   lng: real("lng"),
   confidence: real("confidence"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// Global canonical place database - shared across all users
+export const venturrPlaces = pgTable("venturr_places", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  displayName: text("display_name"),
+  categoryPrimary: text("category_primary").notNull(), // "things to do" | "places to eat" | "places to stay"
+  addressFull: text("address_full"),
+  city: text("city"),
+  region: text("region"),
+  postalCode: text("postal_code"),
+  country: text("country"),
+  lat: real("lat"),
+  lng: real("lng"),
+  geoPrecision: text("geo_precision").default("unknown"), // "exact" | "approx" | "unknown"
+  placeStatus: text("place_status").default("active").notNull(), // "active" | "needs_review" | "duplicate" | "closed"
+  // Future Google Places enrichment
+  googlePlaceId: text("google_place_id"),
+  googleData: jsonb("google_data"),
+  googleFetchedAt: timestamp("google_fetched_at"),
+  enrichmentStatus: text("enrichment_status").default("not_started"), // "not_started" | "pending" | "enriched" | "failed"
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// Links posts to canonical places - this is the privacy layer
+// Users access places through their posts, not directly
+export const postPlaceLinks = pgTable("post_place_links", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  placeId: integer("place_id").notNull().references(() => venturrPlaces.id, { onDelete: "cascade" }),
+  confidence: real("confidence"),
+  linkType: text("link_type").default("extracted").notNull(), // "extracted" | "user_added" | "user_confirmed"
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
@@ -57,9 +93,24 @@ export const insertPlaceSchema = createInsertSchema(places).omit({
   createdAt: true,
 });
 
+export const insertVenturrPlaceSchema = createInsertSchema(venturrPlaces).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPostPlaceLinkSchema = createInsertSchema(postPlaceLinks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type Collection = typeof collections.$inferSelect;
 export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Post = typeof posts.$inferSelect;
 export type InsertPost = z.infer<typeof insertPostSchema>;
 export type Place = typeof places.$inferSelect;
 export type InsertPlace = z.infer<typeof insertPlaceSchema>;
+export type VenturrPlace = typeof venturrPlaces.$inferSelect;
+export type InsertVenturrPlace = z.infer<typeof insertVenturrPlaceSchema>;
+export type PostPlaceLink = typeof postPlaceLinks.$inferSelect;
+export type InsertPostPlaceLink = z.infer<typeof insertPostPlaceLinkSchema>;
