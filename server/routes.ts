@@ -2,9 +2,11 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertCollectionSchema, insertPostSchema, insertPlaceSchema } from "@shared/schema";
+import type { VenturrPlace } from "@shared/schema";
 import { OpenAI } from "openai";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { generateCollectionThumbnail } from "./lib/thumbnail";
+import { matchOrCreateVenturrPlace } from "./lib/place-matching";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 
 const objectStorageService = new ObjectStorageService();
@@ -325,8 +327,38 @@ export async function registerRoutes(
         console.log("[Extraction] No places found from text or vision");
       }
       
-      // Save places to database
+      // Save places to database using new canonical VenturrPlace system
+      let venturrPlaces: VenturrPlace[] = [];
       if (extractedPlaces.length > 0) {
+        // For each extracted place, match to existing VenturrPlace or create new
+        for (const extractedPlace of extractedPlaces) {
+          try {
+            const { place: venturrPlace, isNew, matchType } = await matchOrCreateVenturrPlace({
+              name: extractedPlace.name,
+              city: extractedPlace.city,
+              country: extractedPlace.country,
+              category: extractedPlace.category || 'things to do',
+              lat: extractedPlace.lat,
+              lng: extractedPlace.lng,
+              confidence: extractedPlace.confidence,
+            });
+
+            // Create PostPlaceLink to connect the post to this place
+            await storage.createPostPlaceLink({
+              postId: post.id,
+              placeId: venturrPlace.id,
+              confidence: extractedPlace.confidence,
+              linkType: 'extracted',
+            });
+
+            venturrPlaces.push(venturrPlace);
+            console.log(`[Extraction] Linked post ${post.id} to VenturrPlace ${venturrPlace.id} (${isNew ? 'new' : matchType})`);
+          } catch (err) {
+            console.error(`[Extraction] Error matching/creating place "${extractedPlace.name}":`, err);
+          }
+        }
+
+        // Also save to legacy places table for backward compatibility during migration
         places = await Promise.all(
           extractedPlaces.map(place => 
             storage.createPlace({
@@ -385,11 +417,29 @@ export async function registerRoutes(
 
   // Places - protected routes
   
-  // Get all places for the user (across all collections)
+  // Get all places for the user (across all collections) - uses new VenturrPlace system
   app.get("/api/places", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const places = await storage.getPlacesByUser(userId);
+      // Use new VenturrPlace system via PostPlaceLinks
+      const venturrPlaces = await storage.getPlacesForUser(userId);
+      
+      // Transform to legacy Place format for frontend compatibility
+      const places = venturrPlaces.map(vp => ({
+        id: vp.linkId, // Use link ID so delete works correctly
+        collectionId: vp.collectionId,
+        name: vp.name,
+        city: vp.city,
+        country: vp.country,
+        category: vp.categoryPrimary,
+        lat: vp.lat,
+        lng: vp.lng,
+        confidence: null,
+        createdAt: vp.createdAt,
+        // Include VenturrPlace ID for future use
+        venturrPlaceId: vp.id,
+      }));
+      
       res.json(places);
     } catch (error) {
       console.error("Error fetching all places:", error);
@@ -406,7 +456,26 @@ export async function registerRoutes(
       if (!collection) {
         return res.status(404).json({ error: "Collection not found" });
       }
-      const places = await storage.getPlaces(collectionId);
+      
+      // Use new VenturrPlace system via PostPlaceLinks
+      const venturrPlaces = await storage.getPlacesForCollection(collectionId);
+      
+      // Transform to legacy Place format for frontend compatibility
+      const places = venturrPlaces.map(vp => ({
+        id: vp.linkId, // Use link ID so delete works correctly
+        collectionId: collectionId,
+        name: vp.name,
+        city: vp.city,
+        country: vp.country,
+        category: vp.categoryPrimary,
+        lat: vp.lat,
+        lng: vp.lng,
+        confidence: vp.confidence,
+        createdAt: vp.createdAt,
+        // Include VenturrPlace ID for future use
+        venturrPlaceId: vp.id,
+      }));
+      
       res.json(places);
     } catch (error) {
       console.error("Error fetching places:", error);
@@ -414,19 +483,29 @@ export async function registerRoutes(
     }
   });
 
+  // Delete a place link (removes the place from user's collection, doesn't delete the canonical VenturrPlace)
   app.delete("/api/places/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const linkId = parseInt(req.params.id);
       const userId = getUserId(req);
       
-      // Get the place to find its collection before deleting
-      const place = await storage.getPlace(id);
-      if (place) {
-        // Clear summary so it regenerates
-        await storage.updateCollection(place.collectionId, userId, { summary: null });
+      // Verify ownership before deleting
+      const linkWithOwnership = await storage.getPostPlaceLinkWithOwnership(linkId, userId);
+      if (!linkWithOwnership) {
+        return res.status(404).json({ error: "Place not found or not authorized" });
       }
       
-      await storage.deletePlace(id);
+      // Delete the PostPlaceLink
+      await storage.deletePostPlaceLink(linkId);
+      
+      // Also delete legacy place if it exists (for backward compatibility)
+      // This will be removed once migration is complete
+      try {
+        await storage.deletePlace(linkId);
+      } catch (e) {
+        // Ignore if legacy place doesn't exist
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting place:", error);

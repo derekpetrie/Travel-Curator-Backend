@@ -1,11 +1,13 @@
 import { db } from "./db";
 import { 
-  collections, posts, places,
+  collections, posts, places, venturrPlaces, postPlaceLinks,
   type Collection, type InsertCollection,
   type Post, type InsertPost,
-  type Place, type InsertPlace
+  type Place, type InsertPlace,
+  type VenturrPlace, type InsertVenturrPlace,
+  type PostPlaceLink, type InsertPostPlaceLink
 } from "@shared/schema";
-import { eq, desc, asc, and } from "drizzle-orm";
+import { eq, desc, asc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Collections
@@ -24,7 +26,7 @@ export interface IStorage {
   createPost(post: InsertPost): Promise<Post>;
   deletePost(id: number): Promise<void>;
   
-  // Places
+  // Legacy Places (will be deprecated after migration)
   getPlaces(collectionId: number): Promise<Place[]>;
   getAllPlaces(): Promise<Place[]>;
   getPlacesByUser(userId: string): Promise<Place[]>;
@@ -32,6 +34,22 @@ export interface IStorage {
   createPlace(place: InsertPlace): Promise<Place>;
   updatePlaceCategory(id: number, category: string): Promise<void>;
   deletePlace(id: number): Promise<void>;
+  
+  // VenturrPlaces (canonical global places)
+  getVenturrPlace(id: number): Promise<VenturrPlace | undefined>;
+  getVenturrPlaceByGoogleId(googlePlaceId: string): Promise<VenturrPlace | undefined>;
+  createVenturrPlace(place: InsertVenturrPlace): Promise<VenturrPlace>;
+  updateVenturrPlace(id: number, updates: Partial<InsertVenturrPlace>): Promise<VenturrPlace | undefined>;
+  findNearbyVenturrPlaces(lat: number, lng: number, radiusMeters: number, category?: string): Promise<VenturrPlace[]>;
+  findVenturrPlacesByCity(city: string, country: string | null, category?: string): Promise<VenturrPlace[]>;
+  
+  // PostPlaceLinks (user's connection to places)
+  createPostPlaceLink(link: InsertPostPlaceLink): Promise<PostPlaceLink>;
+  getPostPlaceLinks(postId: number): Promise<PostPlaceLink[]>;
+  getPostPlaceLinkWithOwnership(linkId: number, userId: string): Promise<{ link: PostPlaceLink; collectionId: number } | undefined>;
+  getPlacesForCollection(collectionId: number): Promise<(VenturrPlace & { linkId: number; confidence: number | null; linkType: string })[]>;
+  getPlacesForUser(userId: string): Promise<(VenturrPlace & { collectionId: number; linkId: number })[]>;
+  deletePostPlaceLink(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -160,6 +178,209 @@ export class DatabaseStorage implements IStorage {
 
   async updatePlaceCategory(id: number, category: string): Promise<void> {
     await db.update(places).set({ category }).where(eq(places.id, id));
+  }
+
+  // VenturrPlaces (canonical global places)
+  async getVenturrPlace(id: number): Promise<VenturrPlace | undefined> {
+    const result = await db.select().from(venturrPlaces).where(eq(venturrPlaces.id, id));
+    return result[0];
+  }
+
+  async getVenturrPlaceByGoogleId(googlePlaceId: string): Promise<VenturrPlace | undefined> {
+    const result = await db.select().from(venturrPlaces)
+      .where(eq(venturrPlaces.googlePlaceId, googlePlaceId));
+    return result[0];
+  }
+
+  async createVenturrPlace(place: InsertVenturrPlace): Promise<VenturrPlace> {
+    const result = await db.insert(venturrPlaces).values(place).returning();
+    return result[0];
+  }
+
+  async updateVenturrPlace(id: number, updates: Partial<InsertVenturrPlace>): Promise<VenturrPlace | undefined> {
+    const result = await db.update(venturrPlaces)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(venturrPlaces.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async findNearbyVenturrPlaces(
+    lat: number, 
+    lng: number, 
+    radiusMeters: number, 
+    category?: string
+  ): Promise<VenturrPlace[]> {
+    // Use Haversine formula to calculate distance
+    // 6371000 is Earth's radius in meters
+    const result = await db.select().from(venturrPlaces)
+      .where(
+        and(
+          sql`${venturrPlaces.lat} IS NOT NULL`,
+          sql`${venturrPlaces.lng} IS NOT NULL`,
+          sql`${venturrPlaces.placeStatus} = 'active'`,
+          category ? eq(venturrPlaces.categoryPrimary, category) : sql`1=1`,
+          sql`(
+            6371000 * acos(
+              cos(radians(${lat})) * cos(radians(${venturrPlaces.lat})) * 
+              cos(radians(${venturrPlaces.lng}) - radians(${lng})) + 
+              sin(radians(${lat})) * sin(radians(${venturrPlaces.lat}))
+            )
+          ) <= ${radiusMeters}`
+        )
+      )
+      .orderBy(
+        sql`(
+          6371000 * acos(
+            cos(radians(${lat})) * cos(radians(${venturrPlaces.lat})) * 
+            cos(radians(${venturrPlaces.lng}) - radians(${lng})) + 
+            sin(radians(${lat})) * sin(radians(${venturrPlaces.lat}))
+          )
+        )`
+      )
+      .limit(20);
+    return result;
+  }
+
+  async findVenturrPlacesByCity(
+    city: string, 
+    country: string | null, 
+    category?: string
+  ): Promise<VenturrPlace[]> {
+    const conditions = [
+      sql`LOWER(${venturrPlaces.city}) = LOWER(${city})`,
+      sql`${venturrPlaces.placeStatus} = 'active'`
+    ];
+    if (country) {
+      conditions.push(sql`LOWER(${venturrPlaces.country}) = LOWER(${country})`);
+    }
+    if (category) {
+      conditions.push(eq(venturrPlaces.categoryPrimary, category));
+    }
+    
+    return await db.select().from(venturrPlaces)
+      .where(and(...conditions))
+      .orderBy(venturrPlaces.name)
+      .limit(50);
+  }
+
+  // PostPlaceLinks (user's connection to places)
+  async createPostPlaceLink(link: InsertPostPlaceLink): Promise<PostPlaceLink> {
+    const result = await db.insert(postPlaceLinks).values(link).returning();
+    return result[0];
+  }
+
+  async getPostPlaceLinks(postId: number): Promise<PostPlaceLink[]> {
+    return await db.select().from(postPlaceLinks)
+      .where(eq(postPlaceLinks.postId, postId));
+  }
+
+  async getPostPlaceLinkWithOwnership(
+    linkId: number, 
+    userId: string
+  ): Promise<{ link: PostPlaceLink; collectionId: number } | undefined> {
+    const result = await db.select({
+      id: postPlaceLinks.id,
+      postId: postPlaceLinks.postId,
+      placeId: postPlaceLinks.placeId,
+      confidence: postPlaceLinks.confidence,
+      linkType: postPlaceLinks.linkType,
+      createdAt: postPlaceLinks.createdAt,
+      collectionId: posts.collectionId,
+    })
+      .from(postPlaceLinks)
+      .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
+      .innerJoin(collections, eq(posts.collectionId, collections.id))
+      .where(and(eq(postPlaceLinks.id, linkId), eq(collections.userId, userId)));
+    
+    if (result.length === 0) return undefined;
+    
+    const row = result[0];
+    return {
+      link: {
+        id: row.id,
+        postId: row.postId,
+        placeId: row.placeId,
+        confidence: row.confidence,
+        linkType: row.linkType,
+        createdAt: row.createdAt,
+      },
+      collectionId: row.collectionId,
+    };
+  }
+
+  async getPlacesForCollection(
+    collectionId: number
+  ): Promise<(VenturrPlace & { linkId: number; confidence: number | null; linkType: string })[]> {
+    const result = await db.select({
+      id: venturrPlaces.id,
+      name: venturrPlaces.name,
+      displayName: venturrPlaces.displayName,
+      categoryPrimary: venturrPlaces.categoryPrimary,
+      addressFull: venturrPlaces.addressFull,
+      city: venturrPlaces.city,
+      region: venturrPlaces.region,
+      postalCode: venturrPlaces.postalCode,
+      country: venturrPlaces.country,
+      lat: venturrPlaces.lat,
+      lng: venturrPlaces.lng,
+      geoPrecision: venturrPlaces.geoPrecision,
+      placeStatus: venturrPlaces.placeStatus,
+      googlePlaceId: venturrPlaces.googlePlaceId,
+      googleData: venturrPlaces.googleData,
+      googleFetchedAt: venturrPlaces.googleFetchedAt,
+      enrichmentStatus: venturrPlaces.enrichmentStatus,
+      createdAt: venturrPlaces.createdAt,
+      updatedAt: venturrPlaces.updatedAt,
+      linkId: postPlaceLinks.id,
+      confidence: postPlaceLinks.confidence,
+      linkType: postPlaceLinks.linkType,
+    })
+      .from(postPlaceLinks)
+      .innerJoin(venturrPlaces, eq(postPlaceLinks.placeId, venturrPlaces.id))
+      .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
+      .where(eq(posts.collectionId, collectionId))
+      .orderBy(desc(postPlaceLinks.createdAt));
+    return result;
+  }
+
+  async getPlacesForUser(
+    userId: string
+  ): Promise<(VenturrPlace & { collectionId: number; linkId: number })[]> {
+    const result = await db.select({
+      id: venturrPlaces.id,
+      name: venturrPlaces.name,
+      displayName: venturrPlaces.displayName,
+      categoryPrimary: venturrPlaces.categoryPrimary,
+      addressFull: venturrPlaces.addressFull,
+      city: venturrPlaces.city,
+      region: venturrPlaces.region,
+      postalCode: venturrPlaces.postalCode,
+      country: venturrPlaces.country,
+      lat: venturrPlaces.lat,
+      lng: venturrPlaces.lng,
+      geoPrecision: venturrPlaces.geoPrecision,
+      placeStatus: venturrPlaces.placeStatus,
+      googlePlaceId: venturrPlaces.googlePlaceId,
+      googleData: venturrPlaces.googleData,
+      googleFetchedAt: venturrPlaces.googleFetchedAt,
+      enrichmentStatus: venturrPlaces.enrichmentStatus,
+      createdAt: venturrPlaces.createdAt,
+      updatedAt: venturrPlaces.updatedAt,
+      collectionId: posts.collectionId,
+      linkId: postPlaceLinks.id,
+    })
+      .from(postPlaceLinks)
+      .innerJoin(venturrPlaces, eq(postPlaceLinks.placeId, venturrPlaces.id))
+      .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
+      .innerJoin(collections, eq(posts.collectionId, collections.id))
+      .where(eq(collections.userId, userId))
+      .orderBy(desc(postPlaceLinks.createdAt));
+    return result;
+  }
+
+  async deletePostPlaceLink(id: number): Promise<void> {
+    await db.delete(postPlaceLinks).where(eq(postPlaceLinks.id, id));
   }
 }
 
