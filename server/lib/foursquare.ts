@@ -102,6 +102,7 @@ function getHeaders(): Record<string, string> {
   return {
     Accept: "application/json",
     Authorization: FOURSQUARE_API_KEY,
+    "X-Places-Api-Version": "2025-06-17",
   };
 }
 
