@@ -1,4 +1,4 @@
-import { Sparkles, Globe, BookmarkCheck } from 'lucide-react';
+import { Sparkles, Share2, BookmarkCheck } from 'lucide-react';
 import venturrrLogo from '../assets/venturr-logo.png';
 
 export default function Landing() {
@@ -17,7 +17,7 @@ export default function Landing() {
           Venturr
         </h1>
         <p className="text-muted-foreground text-lg mb-8 max-w-sm">
-          Save travel spots from TikTok & Instagram. Organize trips. Explore the world.
+          Save travel spots from TikTok & Instagram. Organize trips. Share with friends.
         </p>
 
         <a
@@ -43,7 +43,7 @@ export default function Landing() {
             </div>
             <div>
               <h3 className="font-bold mb-1">Save posts</h3>
-              <p className="text-sm text-muted-foreground">Paste a TikTok or Instagram link to save it to a Venturr</p>
+              <p className="text-sm text-muted-foreground">Paste a TikTok or Instagram link and save it to a trip - we call them Venturrs.</p>
             </div>
           </div>
 
@@ -53,20 +53,28 @@ export default function Landing() {
             </div>
             <div>
               <h3 className="font-bold mb-1">AI extracts places</h3>
-              <p className="text-sm text-muted-foreground">We automatically find restaurants, hotels, and landmarks from the video</p>
+              <p className="text-sm text-muted-foreground">We'll automatically find things to do, places to eat, and places to stay based on the post.</p>
             </div>
           </div>
 
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <Globe className="w-5 h-5 text-primary" />
+              <Share2 className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-bold mb-1">See on a map</h3>
-              <p className="text-sm text-muted-foreground">All your saved places appear on a beautiful map view</p>
+              <h3 className="font-bold mb-1">Organize and share</h3>
+              <p className="text-sm text-muted-foreground">All your saved places can be sorted, mapped to your Venturr, then share it with friends!</p>
             </div>
           </div>
         </div>
+
+        <a
+          href="/api/login"
+          data-testid="button-login-bottom"
+          className="mt-8 mx-auto w-full max-w-xs h-14 bg-primary text-primary-foreground font-bold rounded-lg shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          Let's Venturr!
+        </a>
       </div>
     </div>
   );
