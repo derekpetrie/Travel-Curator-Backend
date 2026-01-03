@@ -202,8 +202,8 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
                   <PlusSquare className="w-8 h-8" />
                 </div>
-                <h2 className="font-heading text-2xl font-bold mb-2">Save to Venturr</h2>
-                <p className="text-muted-foreground">Paste a TikTok or Instagram link to automatically extract travel spots.</p>
+                <h2 className="font-heading text-2xl font-bold mb-2">Save post to a Venturr</h2>
+                <p className="text-muted-foreground">Paste a TikTok or Instagram link to automatically extract details on things to do, places to eat, and places to stay.</p>
               </div>
 
               {isSuccess ? (
@@ -251,7 +251,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                       )}
                     >
                       <FolderPlus className="w-4 h-4" />
-                      Create New
+                      Create new Venturr
                     </button>
                     <button
                       type="button"
@@ -313,7 +313,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                         <label className="text-sm font-medium ml-1">Venturr Name</label>
                         <input 
                           type="text" 
-                          placeholder="e.g., Japan 2025, Bali Trip, Hidden Gems..." 
+                          placeholder="e.g., Japan 2025, Date Night, Adventures..." 
                           className="w-full h-12 px-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none"
                           value={newCollectionName}
                           onChange={(e) => setNewCollectionName(e.target.value)}

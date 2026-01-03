@@ -65,7 +65,7 @@ export function ShareIntentModal() {
           <TouchableOpacity onPress={clearSharedUrl} style={styles.closeButton}>
             <X size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Save to Venturr</Text>
+          <Text style={styles.title}>Save post to a Venturr</Text>
           <View style={styles.placeholder} />
         </View>
 
