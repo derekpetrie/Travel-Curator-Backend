@@ -104,31 +104,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Title is required" });
       }
 
-      // Update the collection title immediately
+      // Update only the title, preserve gradient
       const collection = await storage.updateCollection(id, userId, { 
-        title: title.trim(),
-        coverImage: null,
-        coverGradient: null 
+        title: title.trim()
       });
 
       if (!collection) {
         return res.status(404).json({ error: "Collection not found" });
       }
-
-      // Regenerate thumbnail in the background
-      generateCollectionThumbnail(title.trim()).then(async (thumbnail) => {
-        try {
-          await storage.updateCollectionThumbnail(
-            id,
-            userId,
-            thumbnail.coverImage,
-            thumbnail.coverGradient
-          );
-          console.log(`[Thumbnail] Updated thumbnail for renamed collection: ${title}`);
-        } catch (err) {
-          console.error("Error updating collection thumbnail after rename:", err);
-        }
-      });
 
       res.json(collection);
     } catch (error) {

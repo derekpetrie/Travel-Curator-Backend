@@ -9,7 +9,7 @@ import { Link } from 'wouter';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollection, fetchPosts, fetchPlaces, updateCollectionCover, generateSummary, renameCollection, deletePost } from '@/lib/api';
+import { fetchCollection, fetchPosts, fetchPlaces, generateSummary, renameCollection, deletePost } from '@/lib/api';
 
 export default function VenturrDetail() {
   const [, params] = useRoute('/venturr/:id');
@@ -35,12 +35,6 @@ export default function VenturrDetail() {
     queryFn: () => fetchPlaces(collectionId),
     enabled: !!collectionId,
   });
-
-  const handleSaveCover = async (coverImage: string | null, coverGradient: string | null) => {
-    await updateCollectionCover(collectionId, coverImage, coverGradient);
-    queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
-    queryClient.invalidateQueries({ queryKey: ['collections'] });
-  };
 
   // Invalidate collections when leaving this page to ensure home shows updated covers
   useEffect(() => {
@@ -90,7 +84,8 @@ export default function VenturrDetail() {
     return <div className="p-8 text-center">Venturr not found</div>;
   }
 
-  const coverImage = collection.coverImage;
+  // Cover: use first post's thumbnail, otherwise show gradient
+  const firstPostThumbnail = posts.length > 0 ? posts[0]?.thumbnailUrl : null;
   const coverGradient = collection.coverGradient || '#FF385C, #FF6B8A';
   // Normalize gradient parts to ensure they have # prefix
   const gradientParts = coverGradient.split(',').map(s => {
@@ -107,9 +102,9 @@ export default function VenturrDetail() {
     <div className="min-h-screen pb-24 bg-background">
       {/* Header Image */}
       <div className="relative h-64 w-full">
-        {coverImage ? (
+        {firstPostThumbnail ? (
           <img 
-            src={coverImage} 
+            src={firstPostThumbnail} 
             alt={collection.title} 
             className="w-full h-full object-cover"
           />
@@ -262,10 +257,7 @@ export default function VenturrDetail() {
         open={showEditDrawer}
         onOpenChange={setShowEditDrawer}
         venturr={collection}
-        currentCoverImage={coverImage || null}
-        currentCoverGradient={coverGradient}
         onSaveTitle={handleSaveTitle}
-        onSaveCover={handleSaveCover}
       />
     </div>
   );

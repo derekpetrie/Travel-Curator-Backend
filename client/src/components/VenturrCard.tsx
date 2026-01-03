@@ -24,8 +24,8 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const queryClient = useQueryClient();
   
-  // Priority: custom upload > first post thumbnail > gradient fallback
-  const displayImage = venturr.coverImage || venturr.firstPostThumbnail || null;
+  // Cover: use first post's thumbnail, otherwise show gradient
+  const displayImage = venturr.firstPostThumbnail || null;
 
   const renameMutation = useMutation({
     mutationFn: async () => {
