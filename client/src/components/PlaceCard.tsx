@@ -132,12 +132,6 @@ export function PlaceCard({ place, collectionId }: PlaceCardProps) {
               </div>
               
               <div className="flex items-center gap-1 flex-shrink-0">
-                {place.rating && (
-                  <div className="flex items-center gap-0.5 text-xs font-medium text-gunmetal-700" data-testid={`place-rating-${place.id}`}>
-                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    {(place.rating / 2).toFixed(1)}
-                  </div>
-                )}
                 {place.lat && place.lng && (
                   <a 
                     href={`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`}
@@ -160,16 +154,22 @@ export function PlaceCard({ place, collectionId }: PlaceCardProps) {
 
           <div className="flex items-center justify-between mt-1.5">
             <div className="flex items-center gap-2 text-xs text-gunmetal-500">
-              {place.isOpenNow !== null && place.isOpenNow !== undefined && (
-                <span className={`flex items-center gap-0.5 ${place.isOpenNow ? 'text-green-600' : 'text-gunmetal-400'}`}>
-                  <Clock className="w-3 h-3" />
-                  {place.isOpenNow ? 'Open' : 'Closed'}
-                </span>
+              {place.rating && (
+                <div className="flex items-center gap-0.5 font-medium text-gunmetal-700" data-testid={`place-rating-${place.id}`}>
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  {place.rating.toFixed(1)}
+                </div>
               )}
               {place.priceLevel && (
                 <span className="font-medium">
                   {'$'.repeat(place.priceLevel)}
                   <span className="text-gunmetal-300">{'$'.repeat(4 - place.priceLevel)}</span>
+                </span>
+              )}
+              {place.isOpenNow !== null && place.isOpenNow !== undefined && (
+                <span className={`flex items-center gap-0.5 ${place.isOpenNow ? 'text-green-600' : 'text-gunmetal-400'}`}>
+                  <Clock className="w-3 h-3" />
+                  {place.isOpenNow ? 'Open' : 'Closed'}
                 </span>
               )}
             </div>

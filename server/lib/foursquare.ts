@@ -284,12 +284,15 @@ export async function enrichPlaceAndSave(placeId: number): Promise<boolean> {
     const photoUrl = enrichmentData.photos.length > 0 ? enrichmentData.photos[0].url : null;
 
     // Save flattened fields + JSON blob
+    // Foursquare uses 0-10 scale, normalize to 0-5 for consistency with Google
+    const normalizedRating = enrichmentData.rating ? enrichmentData.rating / 2 : null;
+    
     await storage.updateVenturrPlace(placeId, {
       fsqId: enrichmentData.fsqId,
       fsqData: enrichmentData,
       fsqFetchedAt: new Date(),
       photoUrl,
-      rating: enrichmentData.rating ?? null,
+      rating: normalizedRating,
       website: enrichmentData.website ?? null,
       phone: enrichmentData.phone ?? null,
       hoursDisplay: enrichmentData.hours?.display ?? null,
