@@ -173,15 +173,27 @@ export async function findAndEnrichPlace(
   }
 
   try {
-    const searchResults = await searchNearbyPlaces(
+    // First try with tight radius (1km) for accurate matches
+    let searchResults = await searchNearbyPlaces(
       place.name,
       place.lat,
       place.lng,
       1000
     );
 
+    // If no results, retry with much larger radius (50km) to handle inaccurate geocoding
     if (searchResults.length === 0) {
-      console.log(`[Google Places] No results found for: ${place.name}`);
+      console.log(`[Google Places] No results within 1km for "${place.name}", retrying with 50km radius...`);
+      searchResults = await searchNearbyPlaces(
+        place.name,
+        place.lat,
+        place.lng,
+        50000
+      );
+    }
+
+    if (searchResults.length === 0) {
+      console.log(`[Google Places] No results found for: ${place.name} even with expanded search`);
       return null;
     }
 
