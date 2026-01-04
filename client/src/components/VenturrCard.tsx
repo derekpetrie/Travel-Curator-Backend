@@ -63,29 +63,29 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
   return (
     <div className="relative">
       {/* Mobile: Horizontal bar layout */}
-      <div className="md:hidden flex items-center gap-3 p-3 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all">
+      <div className="md:hidden flex items-stretch h-[88px] rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all overflow-hidden">
+        {/* Thumbnail - full bleed to border */}
+        <div className="w-[88px] flex-shrink-0">
+          {displayImage ? (
+            <img 
+              src={displayImage} 
+              alt={venturr.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div 
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)` }}
+            >
+              <MapPin className="w-6 h-6 text-white/80" />
+            </div>
+          )}
+        </div>
+        
         <Link 
           href={`/venturr/${venturr.id}`} 
-          className="flex items-center gap-3 flex-1 min-w-0"
+          className="flex items-center gap-3 flex-1 min-w-0 px-3"
         >
-          {/* Thumbnail */}
-          <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
-            {displayImage ? (
-              <img 
-                src={displayImage} 
-                alt={venturr.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div 
-                className="w-full h-full flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)` }}
-              >
-                <MapPin className="w-6 h-6 text-white/80" />
-              </div>
-            )}
-          </div>
-          
           {/* Content */}
           <div className="flex-1 min-w-0">
             <h3 className="font-heading text-base font-bold text-foreground line-clamp-1">
@@ -100,11 +100,11 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
           <ArrowRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
         </Link>
         
-        {/* Mobile menu button - inside flex, not overlapping */}
+        {/* Mobile menu button */}
         <button
           onClick={handleMenuClick}
           data-testid={`button-menu-venturr-mobile-${venturr.id}`}
-          className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
+          className="w-12 flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors flex-shrink-0"
         >
           <MoreVertical className="w-4 h-4" />
         </button>
