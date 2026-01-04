@@ -62,7 +62,59 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
   
   return (
     <div className="relative">
-      <Link href={`/venturr/${venturr.id}`} className="group block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+      {/* Mobile: Horizontal bar layout */}
+      <div className="md:hidden flex items-center gap-3 p-3 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all">
+        <Link 
+          href={`/venturr/${venturr.id}`} 
+          className="flex items-center gap-3 flex-1 min-w-0"
+        >
+          {/* Thumbnail */}
+          <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
+            {displayImage ? (
+              <img 
+                src={displayImage} 
+                alt={venturr.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div 
+                className="w-full h-full flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)` }}
+              >
+                <MapPin className="w-6 h-6 text-white/80" />
+              </div>
+            )}
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-heading text-base font-bold text-foreground line-clamp-1">
+              {venturr.title}
+            </h3>
+            <span className="text-muted-foreground text-sm">
+              {venturr.itemCount ?? 0} items
+            </span>
+          </div>
+          
+          {/* Arrow indicator */}
+          <ArrowRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+        </Link>
+        
+        {/* Mobile menu button - inside flex, not overlapping */}
+        <button
+          onClick={handleMenuClick}
+          data-testid={`button-menu-venturr-mobile-${venturr.id}`}
+          className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Desktop: Original card layout */}
+      <Link 
+        href={`/venturr/${venturr.id}`} 
+        className="group hidden md:block relative overflow-hidden rounded-xl aspect-[4/5] bg-muted shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+      >
         {displayImage ? (
           <img 
             src={displayImage} 
@@ -95,10 +147,11 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
         </div>
       </Link>
 
+      {/* Menu button - hidden on mobile, shown on desktop */}
       <button
         onClick={handleMenuClick}
         data-testid={`button-menu-venturr-${venturr.id}`}
-        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors z-10"
+        className="hidden md:flex absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm items-center justify-center text-white hover:bg-black/60 transition-colors z-10"
       >
         <MoreVertical className="w-4 h-4" />
       </button>

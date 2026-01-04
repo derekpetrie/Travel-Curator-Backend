@@ -146,19 +146,19 @@ export default function Home() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {sortedCollections.map((venturr: any) => (
               <VenturrCard key={venturr.id} venturr={venturr} />
             ))}
             
-            {/* Add New Place Holder */}
+            {/* Add New Place Holder - responsive layout */}
             <button 
               onClick={() => setShowCreateDrawer(true)}
               data-testid="button-create-venturr"
-              className="aspect-[4/5] rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all group"
+              className="md:aspect-[4/5] h-20 md:h-auto rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 flex md:flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all group"
             >
-              <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                <Plus className="w-6 h-6" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                <Plus className="w-5 h-5 md:w-6 md:h-6" />
               </div>
               <span className="font-medium text-sm">Create New</span>
             </button>
