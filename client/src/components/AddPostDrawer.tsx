@@ -88,7 +88,16 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
     onError: handleMutationError,
   });
 
+  const [noPlacesWarning, setNoPlacesWarning] = useState(false);
+
   const showSuccessAndNavigate = (collectionId: number, extractionWarning?: string) => {
+    // Check if no places were found
+    if (extractionWarning === 'NO_PLACES_FOUND') {
+      setNoPlacesWarning(true);
+      setSuccessCollectionId(collectionId);
+      return;
+    }
+    
     setIsSuccess(true);
     setSuccessCollectionId(collectionId);
     
@@ -105,14 +114,23 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       
       // Navigate to the Venturr detail screen
       navigate(`/venturr/${collectionId}`);
-      
-      // Show warning toast if no places were extracted
-      if (extractionWarning) {
-        setTimeout(() => {
-          toast.info(extractionWarning, { duration: 6000 });
-        }, 500);
-      }
     }, 1500);
+  };
+
+  const handleNoPlacesContinue = () => {
+    const collectionId = successCollectionId;
+    setNoPlacesWarning(false);
+    setSuccessCollectionId(null);
+    setUrl('');
+    setNewCollectionName('');
+    setManualCaption('');
+    setNeedsManualCaption(false);
+    setErrorMessage('');
+    setActiveTab('new');
+    setOpen(false);
+    if (collectionId) {
+      navigate(`/venturr/${collectionId}`);
+    }
   };
 
   const resetForm = () => {
@@ -122,6 +140,9 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
     setNeedsManualCaption(false);
     setErrorMessage('');
     setActiveTab('new');
+    setNoPlacesWarning(false);
+    setIsSuccess(false);
+    setSuccessCollectionId(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -164,7 +185,41 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                 <p className="text-muted-foreground">Paste a TikTok or Instagram link to automatically extract details on things to do, places to eat, and places to stay.</p>
               </div>
 
-              {isSuccess ? (
+              {noPlacesWarning ? (
+                <div className="animate-in fade-in zoom-in duration-300 py-8 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-4">
+                    <AlertCircle className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-heading text-xl font-bold text-foreground mb-2">Post saved, but no places found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    We couldn't identify a specific location from this post.
+                  </p>
+                  <div className="text-left bg-muted rounded-lg p-4 mb-6 w-full max-w-sm">
+                    <p className="text-sm font-medium text-foreground mb-2">For best results, posts should include:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>A specific place name (cafe, restaurant, attraction)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>The city or location mentioned in the caption</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>More than just hashtags or general regions</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <button
+                    onClick={handleNoPlacesContinue}
+                    data-testid="button-continue-no-places"
+                    className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    Got it
+                  </button>
+                </div>
+              ) : isSuccess ? (
                 <div className="animate-in fade-in zoom-in duration-300 py-12 flex flex-col items-center justify-center text-center">
                   <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-green-500/30">
                     <Check className="w-10 h-10" />

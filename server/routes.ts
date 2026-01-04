@@ -324,7 +324,7 @@ export async function registerRoutes(
       
       // Step 3: If still no places, set warning message
       if (extractedPlaces.length === 0) {
-        extractionWarning = "No locations found in this post. You can add places manually from the Places tab.";
+        extractionWarning = "NO_PLACES_FOUND";
         console.log("[Extraction] No places found from text or vision");
       }
       
