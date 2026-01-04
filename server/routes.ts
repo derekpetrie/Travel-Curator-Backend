@@ -419,6 +419,95 @@ export async function registerRoutes(
     }
   });
 
+  // Re-extract places for an existing post (for debugging/retry)
+  app.post("/api/posts/:id/re-extract", isAuthenticated, async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      // Get the post
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+      
+      // Verify the collection belongs to the user
+      const collection = await storage.getCollection(post.collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      console.log(`[Re-Extract] Starting extraction for post ${postId}`);
+      console.log(`[Re-Extract] Caption: ${post.caption?.substring(0, 100)}...`);
+      console.log(`[Re-Extract] Thumbnail: ${post.thumbnailUrl ? 'present' : 'missing'}`);
+      
+      let extractedPlaces: any[] = [];
+      let extractionMethod: string | null = null;
+      
+      // Step 1: Try text extraction from caption
+      if (post.caption) {
+        console.log("[Re-Extract] Trying text extraction...");
+        extractedPlaces = await extractPlacesFromText(post.caption);
+        console.log("[Re-Extract] Text extraction returned", extractedPlaces.length, "places");
+        if (extractedPlaces.length > 0) {
+          extractionMethod = 'text';
+        }
+      }
+      
+      // Step 2: If no places found and we have a thumbnail, try vision extraction
+      if (extractedPlaces.length === 0 && post.thumbnailUrl) {
+        console.log("[Re-Extract] No places from text, trying vision...");
+        extractedPlaces = await extractPlacesFromImage(post.thumbnailUrl);
+        console.log("[Re-Extract] Vision extraction returned", extractedPlaces.length, "places");
+        if (extractedPlaces.length > 0) {
+          extractionMethod = 'vision';
+        }
+      }
+      
+      // Save places to database
+      const venturrPlaces: VenturrPlace[] = [];
+      for (const extractedPlace of extractedPlaces) {
+        try {
+          const { place: venturrPlace, isNew, matchType } = await matchOrCreateVenturrPlace({
+            name: extractedPlace.name,
+            city: extractedPlace.city,
+            country: extractedPlace.country,
+            category: extractedPlace.category || 'things to do',
+            lat: extractedPlace.lat,
+            lng: extractedPlace.lng,
+            confidence: extractedPlace.confidence,
+          });
+
+          // Create PostPlaceLink
+          await storage.createPostPlaceLink({
+            postId: post.id,
+            placeId: venturrPlace.id,
+            confidence: extractedPlace.confidence,
+            linkType: 'extracted',
+          });
+
+          venturrPlaces.push(venturrPlace);
+          console.log(`[Re-Extract] Linked post ${post.id} to VenturrPlace ${venturrPlace.id}`);
+          
+          // Trigger enrichment
+          enrichPlaceAsync(venturrPlace.id);
+        } catch (err) {
+          console.error(`[Re-Extract] Error matching/creating place:`, err);
+        }
+      }
+      
+      res.json({ 
+        success: true,
+        extractionMethod,
+        extractedPlaces,
+        venturrPlaces: venturrPlaces.map(p => ({ id: p.id, name: p.name }))
+      });
+    } catch (error) {
+      console.error("Error re-extracting places:", error);
+      res.status(500).json({ error: "Failed to re-extract places" });
+    }
+  });
+
   // Places - protected routes
   
   // Get all places for the user (across all collections) - uses new VenturrPlace system
