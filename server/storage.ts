@@ -54,8 +54,10 @@ export interface IStorage {
   
   // Plans
   getPlanByCollection(collectionId: number): Promise<Plan | undefined>;
+  getPlanBySlug(slug: string): Promise<Plan | undefined>;
+  getPublicPlans(limit?: number): Promise<(Plan & { collectionTitle: string })[]>;
   createPlan(plan: InsertPlan): Promise<Plan>;
-  updatePlan(id: number, updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date }): Promise<Plan | undefined>;
+  updatePlan(id: number, updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date; isPublic?: boolean; shareSlug?: string }): Promise<Plan | undefined>;
   deletePlan(id: number): Promise<void>;
 }
 
@@ -431,7 +433,7 @@ export class DatabaseStorage implements IStorage {
 
   async updatePlan(
     id: number,
-    updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date }
+    updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date; isPublic?: boolean; shareSlug?: string }
   ): Promise<Plan | undefined> {
     const result = await db.update(plans)
       .set({ ...updates, updatedAt: new Date() })
@@ -442,6 +444,36 @@ export class DatabaseStorage implements IStorage {
 
   async deletePlan(id: number): Promise<void> {
     await db.delete(plans).where(eq(plans.id, id));
+  }
+
+  async getPlanBySlug(slug: string): Promise<Plan | undefined> {
+    const result = await db.select().from(plans)
+      .where(eq(plans.shareSlug, slug))
+      .limit(1);
+    return result[0];
+  }
+
+  async getPublicPlans(limit: number = 20): Promise<(Plan & { collectionTitle: string })[]> {
+    const result = await db.select({
+      id: plans.id,
+      collectionId: plans.collectionId,
+      status: plans.status,
+      durationDays: plans.durationDays,
+      content: plans.content,
+      placesSnapshotHash: plans.placesSnapshotHash,
+      generatedAt: plans.generatedAt,
+      isPublic: plans.isPublic,
+      shareSlug: plans.shareSlug,
+      createdAt: plans.createdAt,
+      updatedAt: plans.updatedAt,
+      collectionTitle: collections.title,
+    })
+      .from(plans)
+      .innerJoin(collections, eq(plans.collectionId, collections.id))
+      .where(eq(plans.isPublic, true))
+      .orderBy(desc(plans.updatedAt))
+      .limit(limit);
+    return result;
   }
 }
 

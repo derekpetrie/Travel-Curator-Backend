@@ -129,6 +129,9 @@ export const plans = pgTable("plans", {
   content: jsonb("content"), // PlanContent JSON structure
   placesSnapshotHash: text("places_snapshot_hash"), // Hash of place IDs to detect changes
   generatedAt: timestamp("generated_at"),
+  // Sharing fields
+  isPublic: boolean("is_public").default(false).notNull(),
+  shareSlug: text("share_slug"), // Unique URL slug for public sharing
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });

@@ -158,3 +158,45 @@ export async function deletePlan(collectionId: number): Promise<void> {
   });
   if (!response.ok) throw new Error('Failed to delete plan');
 }
+
+export async function updatePlan(collectionId: number, content: PlanContent): Promise<Plan> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/plan`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!response.ok) throw new Error('Failed to update plan');
+  return response.json();
+}
+
+export async function sharePlan(collectionId: number, isPublic: boolean): Promise<{ plan: Plan; shareUrl: string | null }> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/plan/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isPublic }),
+  });
+  if (!response.ok) throw new Error('Failed to share plan');
+  return response.json();
+}
+
+export async function fetchPublicPlan(slug: string): Promise<{ plan: Plan; places: Place[]; collectionTitle: string }> {
+  const response = await fetch(`${API_BASE}/plans/${slug}`);
+  if (!response.ok) throw new Error('Failed to fetch plan');
+  return response.json();
+}
+
+export async function duplicatePlan(slug: string, targetCollectionId: number): Promise<Plan> {
+  const response = await fetch(`${API_BASE}/plans/${slug}/duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetCollectionId }),
+  });
+  if (!response.ok) throw new Error('Failed to duplicate plan');
+  return response.json();
+}
+
+export async function fetchPublicPlans(): Promise<(Plan & { collectionTitle: string })[]> {
+  const response = await fetch(`${API_BASE}/plans/public`);
+  if (!response.ok) throw new Error('Failed to fetch public plans');
+  return response.json();
+}

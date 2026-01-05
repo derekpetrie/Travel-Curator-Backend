@@ -1,8 +1,10 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCollectionSchema, insertPostSchema, insertPlaceSchema, planContentSchema } from "@shared/schema";
+import { db } from "./db";
+import { insertCollectionSchema, insertPostSchema, insertPlaceSchema, planContentSchema, collections } from "@shared/schema";
 import type { VenturrPlace, PlanContent, PlaceWithEnrichment } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { OpenAI } from "openai";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { generateCollectionThumbnail } from "./lib/thumbnail";
@@ -814,6 +816,152 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting plan:", error);
       res.status(500).json({ error: "Failed to delete plan" });
+    }
+  });
+
+  // Update plan content (for editing)
+  app.patch("/api/collections/:id/plan", isAuthenticated, async (req, res) => {
+    try {
+      const collectionId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { content } = req.body;
+      
+      // Verify user owns this collection
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      const plan = await storage.getPlanByCollection(collectionId);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      
+      // Validate content structure
+      const validated = planContentSchema.parse(content);
+      
+      const updated = await storage.updatePlan(plan.id, { content: validated });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating plan:", error);
+      res.status(500).json({ error: "Failed to update plan" });
+    }
+  });
+
+  // Share/unshare a plan
+  app.post("/api/collections/:id/plan/share", isAuthenticated, async (req, res) => {
+    try {
+      const collectionId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { isPublic } = req.body;
+      
+      // Verify user owns this collection
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      const plan = await storage.getPlanByCollection(collectionId);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      
+      let shareSlug = plan.shareSlug || undefined;
+      if (isPublic && !shareSlug) {
+        // Generate a unique slug
+        shareSlug = `${collection.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30)}-${Date.now().toString(36)}`;
+      }
+      
+      const updated = await storage.updatePlan(plan.id, { isPublic, shareSlug });
+      
+      const shareUrl = isPublic ? `/plan/${shareSlug}` : null;
+      res.json({ plan: updated, shareUrl });
+    } catch (error) {
+      console.error("Error sharing plan:", error);
+      res.status(500).json({ error: "Failed to share plan" });
+    }
+  });
+
+  // Get a public plan by slug (no auth required)
+  app.get("/api/plans/:slug", async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const plan = await storage.getPlanBySlug(slug);
+      
+      if (!plan || !plan.isPublic) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      
+      // Get collection info and places
+      const collectionResult = await db.select().from(collections).where(eq(collections.id, plan.collectionId)).limit(1);
+      const collection = collectionResult[0];
+      
+      if (!collection) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      
+      const places = await storage.getPlacesForCollection(plan.collectionId);
+      
+      res.json({
+        plan,
+        places,
+        collectionTitle: collection.title,
+      });
+    } catch (error) {
+      console.error("Error fetching public plan:", error);
+      res.status(500).json({ error: "Failed to fetch plan" });
+    }
+  });
+
+  // Get public plans for explore
+  app.get("/api/plans/public", async (req, res) => {
+    try {
+      const plans = await storage.getPublicPlans(20);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching public plans:", error);
+      res.status(500).json({ error: "Failed to fetch public plans" });
+    }
+  });
+
+  // Duplicate a public plan to user's collection
+  app.post("/api/plans/:slug/duplicate", isAuthenticated, async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const userId = getUserId(req);
+      const { targetCollectionId } = req.body;
+      
+      const sourcePlan = await storage.getPlanBySlug(slug);
+      if (!sourcePlan || !sourcePlan.isPublic) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      
+      // Verify user owns target collection
+      const targetCollection = await storage.getCollection(targetCollectionId, userId);
+      if (!targetCollection) {
+        return res.status(404).json({ error: "Target collection not found" });
+      }
+      
+      // Check if target collection already has a plan
+      const existingPlan = await storage.getPlanByCollection(targetCollectionId);
+      if (existingPlan) {
+        return res.status(400).json({ error: "Target collection already has a plan. Delete it first." });
+      }
+      
+      // Create a copy of the plan
+      const newPlan = await storage.createPlan({
+        collectionId: targetCollectionId,
+        status: 'ready',
+        durationDays: sourcePlan.durationDays,
+        content: sourcePlan.content as any,
+        placesSnapshotHash: null, // Will be stale until places are added
+        isPublic: false,
+      });
+      
+      res.json(newPlan);
+    } catch (error) {
+      console.error("Error duplicating plan:", error);
+      res.status(500).json({ error: "Failed to duplicate plan" });
     }
   });
 
