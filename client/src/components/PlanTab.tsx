@@ -73,11 +73,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       queryClient.invalidateQueries({ queryKey: ['plan', collectionId] });
       if (data.shareUrl) {
         const fullUrl = `${window.location.origin}${data.shareUrl}`;
-        try {
-          navigator.clipboard.writeText(fullUrl);
-        } catch (e) {
-          console.log('Clipboard not available');
-        }
+        navigator.clipboard.writeText(fullUrl).catch(() => {});
       }
     },
   });
@@ -157,11 +153,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const copyShareLink = useCallback(() => {
     if (plan?.shareSlug) {
       const fullUrl = `${window.location.origin}/plan/${plan.shareSlug}`;
-      try {
-        navigator.clipboard.writeText(fullUrl);
-      } catch (e) {
-        console.log('Clipboard not available');
-      }
+      navigator.clipboard.writeText(fullUrl).catch(() => {});
     }
   }, [plan?.shareSlug]);
 
