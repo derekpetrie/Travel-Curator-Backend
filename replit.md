@@ -61,7 +61,10 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - `GET /api/collections/:id/places` - Get places in Venturr
 - `GET /api/collections/:id/plan` - Get AI-generated travel plan (with staleness detection)
 - `POST /api/collections/:id/plan/generate` - Generate or regenerate travel plan (async)
+- `PATCH /api/collections/:id/plan` - Update plan content (edit blocks, titles, notes)
+- `POST /api/collections/:id/plan/share` - Toggle plan sharing (isPublic, generates shareSlug)
 - `DELETE /api/collections/:id/plan` - Delete travel plan
+- `GET /api/plans/:slug` - Get public plan by share slug (no auth required)
 
 ## Venturr Design System v1.0
 
@@ -107,6 +110,9 @@ Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion
 - Be transparent about AI (label AI-suggested content)
 
 ## Recent Changes
+- 2026-01-05: Added plan editing with inline block title, notes, and time of day changes
+- 2026-01-05: Added plan sharing with public links (/plan/:slug) and copy-to-clipboard
+- 2026-01-05: Added public plan view page (no auth required) at /plan/:slug
 - 2026-01-05: Added Plan tab to Venturr detail with AI-generated day-by-day itineraries
 - 2026-01-05: Restructured Venturr detail tabs to Posts | Plan | Places with List/Map toggle
 - 2026-01-05: Added plan staleness detection (shows banner when places change after plan generation)
