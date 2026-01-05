@@ -54,14 +54,14 @@ function PlaceMarker({
       <div 
         className="rounded-full shadow-lg flex items-center justify-center bg-white"
         style={{ 
-          width: 34,
-          height: 34,
-          border: `2.5px solid ${outlineColor}`,
-          boxShadow: isSelected ? `0 0 0 3px ${outlineColor}40, 0 4px 12px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0,0,0,0.15)'
+          width: 26,
+          height: 26,
+          border: `2px solid ${outlineColor}`,
+          boxShadow: isSelected ? `0 0 0 2px ${outlineColor}40, 0 3px 10px rgba(0,0,0,0.15)` : '0 2px 6px rgba(0,0,0,0.15)'
         }}
       >
         <Icon 
-          style={{ color: outlineColor, width: 17, height: 17 }}
+          style={{ color: outlineColor, width: 13, height: 13 }}
           strokeWidth={2.5}
         />
       </div>
