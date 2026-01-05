@@ -140,7 +140,7 @@ export function PlaceMap({
       initialViewState={initialViewState}
       onLoad={handleMapLoad}
       style={{ width: '100%', height: '100%' }}
-      mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+      mapStyle={`https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=${import.meta.env.VITE_STADIA_MAPS_API_KEY || ''}`}
     >
       <NavigationControl position="top-right" />
 
