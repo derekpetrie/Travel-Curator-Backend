@@ -30,8 +30,13 @@ function AppContent() {
   const { isLoading, isAuthenticated } = useAuth();
   const [location] = useLocation();
 
+  // Public plan routes don't require auth
   if (location.startsWith('/plan/')) {
-    return <PublicPlan />;
+    return (
+      <Switch>
+        <Route path="/plan/:slug" component={PublicPlan} />
+      </Switch>
+    );
   }
 
   if (isLoading) {
