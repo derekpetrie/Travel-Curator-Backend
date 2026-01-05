@@ -73,7 +73,11 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       queryClient.invalidateQueries({ queryKey: ['plan', collectionId] });
       if (data.shareUrl) {
         const fullUrl = `${window.location.origin}${data.shareUrl}`;
-        navigator.clipboard.writeText(fullUrl);
+        try {
+          navigator.clipboard.writeText(fullUrl);
+        } catch (e) {
+          console.log('Clipboard not available');
+        }
       }
     },
   });
@@ -121,7 +125,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
     if (!editedContent) return;
     const newContent = { ...editedContent };
     newContent.days = [...newContent.days];
-    newContent.days[dayIndex] = { ...newContent.days[dayIndex], title: title || null };
+    newContent.days[dayIndex] = { ...newContent.days[dayIndex], title: title || undefined };
     setEditedContent(newContent);
   }, [editedContent]);
 
@@ -153,7 +157,11 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const copyShareLink = useCallback(() => {
     if (plan?.shareSlug) {
       const fullUrl = `${window.location.origin}/plan/${plan.shareSlug}`;
-      navigator.clipboard.writeText(fullUrl);
+      try {
+        navigator.clipboard.writeText(fullUrl);
+      } catch (e) {
+        console.log('Clipboard not available');
+      }
     }
   }, [plan?.shareSlug]);
 

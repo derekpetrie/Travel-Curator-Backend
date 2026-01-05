@@ -38,7 +38,11 @@ export default function PublicPlan() {
   const placesMap = new Map(places.map((p: PlaceWithEnrichment) => [p.venturrPlaceId || p.id, p]));
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    try {
+      navigator.clipboard.writeText(window.location.href);
+    } catch (e) {
+      console.log('Clipboard not available');
+    }
   };
 
   return (
