@@ -2,7 +2,8 @@ import { useRoute } from 'wouter';
 import { TabBar } from '@/components/TabBar';
 import { PostCard } from '@/components/PostCard';
 import { PlaceCard } from '@/components/PlaceCard';
-import { VenturrMap } from '@/components/VenturrMap';
+import { PlaceMap } from '@/components/PlaceMap';
+import { PlaceDrawer } from '@/components/PlaceDrawer';
 import { EditVenturrDrawer } from '@/components/EditVenturrDrawer';
 import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil } from 'lucide-react';
 import { Link } from 'wouter';
@@ -10,12 +11,15 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCollection, fetchPosts, fetchPlaces, generateSummary, renameCollection, deletePost } from '@/lib/api';
+import type { PlaceWithEnrichment } from '@shared/schema';
 
 export default function VenturrDetail() {
   const [, params] = useRoute('/venturr/:id');
   const collectionId = parseInt(params?.id || '0');
   const [activeTab, setActiveTab] = useState<'posts' | 'places' | 'map'>('posts');
   const [showEditDrawer, setShowEditDrawer] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceWithEnrichment | null>(null);
+  const [placeDrawerOpen, setPlaceDrawerOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: collection, isLoading: collectionLoading } = useQuery({
@@ -246,10 +250,27 @@ export default function VenturrDetail() {
 
         {activeTab === 'map' && (
            <div className="h-[500px]">
-             <VenturrMap places={places} />
+             <PlaceMap 
+               places={places} 
+               onPlaceSelect={(place) => {
+                 setSelectedPlace(place);
+                 setPlaceDrawerOpen(true);
+               }}
+               selectedPlaceId={selectedPlace?.id}
+             />
            </div>
         )}
       </div>
+
+      <PlaceDrawer
+        place={selectedPlace}
+        open={placeDrawerOpen}
+        onOpenChange={(open) => {
+          setPlaceDrawerOpen(open);
+          if (!open) setTimeout(() => setSelectedPlace(null), 300);
+        }}
+        venturrName={collection?.title}
+      />
 
       <TabBar />
 
