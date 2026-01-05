@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import type { VenturrPlace, InsertVenturrPlace } from "@shared/schema";
+import { estimateDuration } from "../duration-estimator";
 
 const STOPWORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
@@ -244,6 +245,9 @@ export async function matchOrCreateVenturrPlace(
     placeStatus = 'needs_review';
   }
 
+  // Estimate duration based on name and category
+  const durationEstimate = estimateDuration(candidate.name, candidate.category);
+
   const newPlace: InsertVenturrPlace = {
     name: candidate.name,
     categoryPrimary: candidate.category,
@@ -256,6 +260,9 @@ export async function matchOrCreateVenturrPlace(
     placeStatus,
     googlePlaceId: candidate.googlePlaceId || null,
     enrichmentStatus: 'not_started',
+    estimatedDurationMinutes: durationEstimate.estimatedDurationMinutes,
+    spanType: durationEstimate.spanType,
+    durationSource: durationEstimate.durationSource,
   };
 
   const created = await storage.createVenturrPlace(newPlace);

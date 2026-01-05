@@ -9,6 +9,7 @@ import { generateCollectionThumbnail } from "./lib/thumbnail";
 import { matchOrCreateVenturrPlace } from "./lib/place-matching";
 import { enrichPlaceAsync } from "./lib/foursquare";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+import { calculateTravelTimeMatrix, formatDuration, TIME_BLOCK_BUDGETS } from "./duration-estimator";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -836,50 +837,89 @@ async function generatePlanAsync(
   try {
     console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days`);
     
-    // Prepare places summary for AI (using venturrPlaces fields)
+    // Calculate travel time matrix for places with coordinates
+    const placesWithCoords = places.filter(p => p.lat && p.lng).map(p => ({
+      id: p.id,
+      lat: p.lat,
+      lng: p.lng
+    }));
+    const travelTimeMatrix = calculateTravelTimeMatrix(placesWithCoords);
+    
+    // Prepare places summary with duration data for AI
     const placesSummary = places.map(p => ({
       id: p.id,
       name: p.displayName || p.name,
       category: p.categoryPrimary || 'things to do',
       city: p.city,
-      country: p.country,
+      durationMinutes: p.estimatedDurationMinutes || 90,
+      durationDisplay: formatDuration(p.estimatedDurationMinutes || 90),
+      spanType: p.spanType || 'single', // single, multi_block, or all_day
     }));
     
-    const prompt = `You are a travel planning assistant. Create a ${durationDays}-day itinerary for a trip called "${collectionTitle}" using these saved places:
+    // Build travel time context (only include significant times)
+    const travelTimeContext: string[] = [];
+    travelTimeMatrix.forEach((minutes, key) => {
+      if (minutes >= 10) { // Only mention trips >= 10 minutes
+        const [id1, id2] = key.split('-').map(Number);
+        const place1 = places.find(p => p.id === id1);
+        const place2 = places.find(p => p.id === id2);
+        if (place1 && place2) {
+          travelTimeContext.push(`${place1.displayName || place1.name} → ${place2.displayName || place2.name}: ${minutes} min drive`);
+        }
+      }
+    });
+    
+    const prompt = `You are a travel planning assistant. Create a ${durationDays}-day itinerary for a trip called "${collectionTitle}".
 
+## SAVED PLACES (with estimated visit durations):
 ${JSON.stringify(placesSummary, null, 2)}
 
-Rules:
-- Organize places into a logical ${durationDays}-day plan
-- Group by geography and category (breakfast spots in morning, activities during day, dinner spots in evening)
-- Each day should have 2-4 activities/places
-- Not all places need to be included if there are too many
-- Return ONLY valid JSON matching this structure (no markdown):
+## TIME BLOCK BUDGETS:
+- Morning: ${TIME_BLOCK_BUDGETS.morning} minutes (8am-12pm)
+- Afternoon: ${TIME_BLOCK_BUDGETS.afternoon} minutes (12pm-5pm)  
+- Evening: ${TIME_BLOCK_BUDGETS.evening} minutes (5pm-9pm)
 
+## SPAN TYPES:
+- "single" = fits in one time block (1-3 hours)
+- "multi_block" = spans morning + afternoon OR afternoon + evening (4-6 hours, like skiing or theme parks)
+- "all_day" = takes entire day (8+ hours, like backpacking trips)
+
+${travelTimeContext.length > 0 ? `## TRAVEL TIMES BETWEEN PLACES:\n${travelTimeContext.slice(0, 15).join('\n')}\n` : ''}
+
+## CRITICAL SCHEDULING RULES:
+1. NEVER put multiple long activities (>120 min each) in the same time block
+2. When scheduling activities in a block, TOTAL TIME (activity + travel) must fit the block budget
+3. Multi-block activities like skiing or theme parks should span morning+afternoon or be the only activity for that half-day
+4. All-day activities get their own day
+5. "Places to eat" are flexible (30-90 min) and can pair with activities
+6. Group nearby places together to minimize travel time
+
+## OUTPUT FORMAT:
+Return ONLY valid JSON (no markdown):
 {
   "overview": {
-    "summary": "A brief 1-2 sentence description of this trip",
-    "travelTips": ["Optional tip 1", "Optional tip 2"]
+    "summary": "Brief 1-2 sentence trip description",
+    "travelTips": ["Optional tip 1"]
   },
   "days": [
     {
       "dayNumber": 1,
-      "title": "Optional day title like 'Exploring Downtown'",
+      "title": "Day theme like 'Mountain Adventures'",
       "blocks": [
         {
-          "id": "unique-id-1",
-          "title": "Block title like 'Morning Coffee'",
+          "id": "unique-id",
+          "title": "Block title",
           "timeOfDay": "morning",
-          "placeIds": [1, 2],
-          "notes": "Optional notes about this block"
+          "placeIds": [1],
+          "notes": "Optional notes"
         }
       ]
     }
-  ],
-  "notes": "Optional overall trip notes"
+  ]
 }
 
-Use only the place IDs from the list above. timeOfDay must be: morning, afternoon, evening, or flexible.`;
+timeOfDay options: morning, afternoon, evening, flexible
+Only use place IDs from the list above.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -904,6 +944,17 @@ Use only the place IDs from the list above. timeOfDay must be: morning, afternoo
       return;
     }
 
+    // Validate and flag overpacked blocks
+    const validationWarnings = validatePlanSchedule(content, placesSummary, travelTimeMatrix);
+    if (validationWarnings.length > 0) {
+      console.log(`[Plan] Schedule warnings: ${validationWarnings.join('; ')}`);
+      // Add warnings to overview notes
+      if (!content.notes) {
+        content.notes = '';
+      }
+      content.notes = validationWarnings.join('\n') + (content.notes ? '\n\n' + content.notes : '');
+    }
+
     // Update plan with generated content
     await storage.updatePlan(planId, {
       status: 'ready',
@@ -918,6 +969,64 @@ Use only the place IDs from the list above. timeOfDay must be: morning, afternoo
     console.error("[Plan] Generation error:", error);
     await storage.updatePlan(planId, { status: 'failed' });
   }
+}
+
+// Validate plan schedule for overpacked blocks
+function validatePlanSchedule(
+  content: PlanContent,
+  placesSummary: Array<{ id: number; name: string; durationMinutes: number; spanType: string }>,
+  travelTimeMatrix: Map<string, number>
+): string[] {
+  const warnings: string[] = [];
+  
+  const placeLookup = new Map(placesSummary.map(p => [p.id, p]));
+  
+  for (const day of content.days) {
+    for (const block of day.blocks) {
+      const blockPlaces = block.placeIds
+        .map(id => placeLookup.get(id))
+        .filter(Boolean) as Array<{ id: number; name: string; durationMinutes: number; spanType: string }>;
+      
+      if (blockPlaces.length === 0) continue;
+      
+      // Get block time budget
+      const timeOfDay = block.timeOfDay || 'flexible';
+      const budget = TIME_BLOCK_BUDGETS[timeOfDay as keyof typeof TIME_BLOCK_BUDGETS] || 180;
+      
+      // Sum activity durations
+      const totalActivityTime = blockPlaces.reduce((sum, p) => sum + p.durationMinutes, 0);
+      
+      // Estimate travel time between places in block
+      let totalTravelTime = 0;
+      for (let i = 0; i < blockPlaces.length - 1; i++) {
+        const key = `${blockPlaces[i].id}-${blockPlaces[i + 1].id}`;
+        const travelTime = travelTimeMatrix.get(key) || 15; // Default 15 min if unknown
+        totalTravelTime += travelTime;
+      }
+      
+      const totalTime = totalActivityTime + totalTravelTime;
+      
+      // Check if over budget
+      if (totalTime > budget * 1.2) { // 20% tolerance
+        const overBy = totalTime - budget;
+        const placeNames = blockPlaces.map(p => p.name).join(', ');
+        warnings.push(
+          `Day ${day.dayNumber} ${block.timeOfDay}: May be tight (${formatDuration(totalTime)} for ${formatDuration(budget)} block) - ${placeNames}`
+        );
+      }
+      
+      // Check for multi-block activities not getting enough time
+      const multiBlockActivities = blockPlaces.filter(p => p.spanType === 'multi_block');
+      if (multiBlockActivities.length > 0 && blockPlaces.length > 1) {
+        const longActivity = multiBlockActivities[0];
+        warnings.push(
+          `Day ${day.dayNumber}: "${longActivity.name}" typically takes ${formatDuration(longActivity.durationMinutes)} - consider giving it more time`
+        );
+      }
+    }
+  }
+  
+  return warnings;
 }
 
 // Fetch metadata from TikTok or Instagram using Iframely API
