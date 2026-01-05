@@ -882,6 +882,17 @@ export async function registerRoutes(
     }
   });
 
+  // Get public plans for explore (must come before :slug route)
+  app.get("/api/plans/public", async (req, res) => {
+    try {
+      const plans = await storage.getPublicPlans(20);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching public plans:", error);
+      res.status(500).json({ error: "Failed to fetch public plans" });
+    }
+  });
+
   // Get a public plan by slug (no auth required)
   app.get("/api/plans/:slug", async (req, res) => {
     try {
@@ -910,17 +921,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching public plan:", error);
       res.status(500).json({ error: "Failed to fetch plan" });
-    }
-  });
-
-  // Get public plans for explore
-  app.get("/api/plans/public", async (req, res) => {
-    try {
-      const plans = await storage.getPublicPlans(20);
-      res.json(plans);
-    } catch (error) {
-      console.error("Error fetching public plans:", error);
-      res.status(500).json({ error: "Failed to fetch public plans" });
     }
   });
 
