@@ -5,7 +5,8 @@ import { PlaceCard } from '@/components/PlaceCard';
 import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
 import { EditVenturrDrawer } from '@/components/EditVenturrDrawer';
-import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil } from 'lucide-react';
+import { PlanTab } from '@/components/PlanTab';
+import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil, CalendarDays, MapPin } from 'lucide-react';
 import { Link } from 'wouter';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -16,7 +17,8 @@ import type { PlaceWithEnrichment } from '@shared/schema';
 export default function VenturrDetail() {
   const [, params] = useRoute('/venturr/:id');
   const collectionId = parseInt(params?.id || '0');
-  const [activeTab, setActiveTab] = useState<'posts' | 'places' | 'map'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'plan' | 'places'>('posts');
+  const [placesView, setPlacesView] = useState<'list' | 'map'>('list');
   const [showEditDrawer, setShowEditDrawer] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithEnrichment | null>(null);
   const [placeDrawerOpen, setPlaceDrawerOpen] = useState(false);
@@ -185,9 +187,21 @@ export default function VenturrDetail() {
               "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
               activeTab === 'posts' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
+            data-testid="tab-posts"
           >
             <Grid className="w-4 h-4" />
             Posts
+          </button>
+          <button 
+            onClick={() => setActiveTab('plan')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
+              activeTab === 'plan' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+            data-testid="tab-plan"
+          >
+            <CalendarDays className="w-4 h-4" />
+            Plan
           </button>
           <button 
             onClick={() => setActiveTab('places')}
@@ -195,19 +209,10 @@ export default function VenturrDetail() {
               "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
               activeTab === 'places' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
+            data-testid="tab-places"
           >
-            <List className="w-4 h-4" />
+            <MapPin className="w-4 h-4" />
             Places
-          </button>
-          <button 
-            onClick={() => setActiveTab('map')}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all",
-              activeTab === 'map' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Map className="w-4 h-4" />
-            Map
           </button>
         </div>
       </div>
@@ -234,31 +239,67 @@ export default function VenturrDetail() {
           </div>
         )}
 
-        {activeTab === 'places' && (
-          <div className="space-y-4">
-            {placesLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : places.length > 0 ? (
-              places.map(place => <PlaceCard key={place.id} place={place} collectionId={collectionId} />)
-            ) : (
-              <EmptyState type="places" />
-            )}
-          </div>
+        {activeTab === 'plan' && (
+          <PlanTab 
+            collectionId={collectionId} 
+            places={places} 
+            placesLoading={placesLoading} 
+          />
         )}
 
-        {activeTab === 'map' && (
-           <div className="h-[500px]">
-             <PlaceMap 
-               places={places} 
-               onPlaceSelect={(place) => {
-                 setSelectedPlace(place);
-                 setPlaceDrawerOpen(true);
-               }}
-               selectedPlaceId={selectedPlace?.id}
-             />
-           </div>
+        {activeTab === 'places' && (
+          <div className="space-y-4">
+            {/* List/Map toggle */}
+            <div className="flex justify-end">
+              <div className="flex p-0.5 bg-muted rounded-md">
+                <button
+                  onClick={() => setPlacesView('list')}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded transition-all",
+                    placesView === 'list' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  data-testid="toggle-places-list"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setPlacesView('map')}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded transition-all",
+                    placesView === 'map' ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  data-testid="toggle-places-map"
+                >
+                  <Map className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {placesView === 'list' ? (
+              placesLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : places.length > 0 ? (
+                <div className="space-y-4">
+                  {places.map(place => <PlaceCard key={place.id} place={place} collectionId={collectionId} />)}
+                </div>
+              ) : (
+                <EmptyState type="places" />
+              )
+            ) : (
+              <div className="h-[500px] rounded-xl overflow-hidden">
+                <PlaceMap 
+                  places={places} 
+                  onPlaceSelect={(place) => {
+                    setSelectedPlace(place);
+                    setPlaceDrawerOpen(true);
+                  }}
+                  selectedPlaceId={selectedPlace?.id}
+                />
+              </div>
+            )}
+          </div>
         )}
       </div>
 

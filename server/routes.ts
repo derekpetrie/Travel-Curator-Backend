@@ -1,8 +1,8 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCollectionSchema, insertPostSchema, insertPlaceSchema } from "@shared/schema";
-import type { VenturrPlace } from "@shared/schema";
+import { insertCollectionSchema, insertPostSchema, insertPlaceSchema, planContentSchema } from "@shared/schema";
+import type { VenturrPlace, PlanContent, PlaceWithEnrichment } from "@shared/schema";
 import { OpenAI } from "openai";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { generateCollectionThumbnail } from "./lib/thumbnail";
@@ -705,7 +705,219 @@ export async function registerRoutes(
     }
   });
 
+  // ========== PLAN ROUTES ==========
+
+  // Get plan for a collection
+  app.get("/api/collections/:id/plan", isAuthenticated, async (req, res) => {
+    try {
+      const collectionId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      // Verify user owns this collection
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      const plan = await storage.getPlanByCollection(collectionId);
+      
+      // Get current places snapshot hash to detect staleness
+      const places = await storage.getPlaces(collectionId);
+      const currentHash = generatePlacesSnapshotHash(places);
+      
+      res.json({
+        plan: plan || null,
+        isStale: plan?.placesSnapshotHash !== currentHash && plan?.status === 'ready',
+        currentPlacesHash: currentHash,
+      });
+    } catch (error) {
+      console.error("Error fetching plan:", error);
+      res.status(500).json({ error: "Failed to fetch plan" });
+    }
+  });
+
+  // Generate or regenerate a plan
+  app.post("/api/collections/:id/plan/generate", isAuthenticated, async (req, res) => {
+    try {
+      const collectionId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { durationDays = 3 } = req.body;
+      
+      // Verify user owns this collection
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      // Get places for this collection
+      const places = await storage.getPlaces(collectionId);
+      if (places.length === 0) {
+        return res.status(400).json({ error: "No places to plan. Add some posts with locations first." });
+      }
+      
+      // Check for existing plan
+      let plan = await storage.getPlanByCollection(collectionId);
+      
+      if (plan?.status === 'generating') {
+        return res.status(409).json({ error: "Plan generation already in progress" });
+      }
+      
+      // Create or update plan to "generating" status
+      const placesHash = generatePlacesSnapshotHash(places);
+      
+      if (plan) {
+        plan = await storage.updatePlan(plan.id, { status: 'generating', durationDays });
+      } else {
+        plan = await storage.createPlan({
+          collectionId,
+          status: 'generating',
+          durationDays,
+          placesSnapshotHash: placesHash,
+        });
+      }
+      
+      if (!plan) {
+        return res.status(500).json({ error: "Failed to create plan" });
+      }
+      
+      // Return immediately, generate in background
+      res.json({ plan, message: "Plan generation started" });
+      
+      // Generate plan asynchronously
+      generatePlanAsync(plan.id, collection.title, places, durationDays, placesHash);
+      
+    } catch (error) {
+      console.error("Error starting plan generation:", error);
+      res.status(500).json({ error: "Failed to start plan generation" });
+    }
+  });
+
+  // Delete a plan
+  app.delete("/api/collections/:id/plan", isAuthenticated, async (req, res) => {
+    try {
+      const collectionId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      // Verify user owns this collection
+      const collection = await storage.getCollection(collectionId, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      const plan = await storage.getPlanByCollection(collectionId);
+      if (plan) {
+        await storage.deletePlan(plan.id);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting plan:", error);
+      res.status(500).json({ error: "Failed to delete plan" });
+    }
+  });
+
   return httpServer;
+}
+
+// Generate a hash of place IDs for detecting changes
+function generatePlacesSnapshotHash(places: { id: number }[]): string {
+  const ids = places.map(p => p.id).sort((a, b) => a - b);
+  return ids.join(',');
+}
+
+// Async plan generation using AI
+async function generatePlanAsync(
+  planId: number,
+  collectionTitle: string,
+  places: any[],
+  durationDays: number,
+  placesHash: string
+) {
+  try {
+    console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days`);
+    
+    // Prepare places summary for AI
+    const placesSummary = places.map(p => ({
+      id: p.id,
+      name: p.name,
+      category: p.category || 'things to do',
+      city: p.city,
+      country: p.country,
+    }));
+    
+    const prompt = `You are a travel planning assistant. Create a ${durationDays}-day itinerary for a trip called "${collectionTitle}" using these saved places:
+
+${JSON.stringify(placesSummary, null, 2)}
+
+Rules:
+- Organize places into a logical ${durationDays}-day plan
+- Group by geography and category (breakfast spots in morning, activities during day, dinner spots in evening)
+- Each day should have 2-4 activities/places
+- Not all places need to be included if there are too many
+- Return ONLY valid JSON matching this structure (no markdown):
+
+{
+  "overview": {
+    "summary": "A brief 1-2 sentence description of this trip",
+    "travelTips": ["Optional tip 1", "Optional tip 2"]
+  },
+  "days": [
+    {
+      "dayNumber": 1,
+      "title": "Optional day title like 'Exploring Downtown'",
+      "blocks": [
+        {
+          "id": "unique-id-1",
+          "title": "Block title like 'Morning Coffee'",
+          "timeOfDay": "morning",
+          "placeIds": [1, 2],
+          "notes": "Optional notes about this block"
+        }
+      ]
+    }
+  ],
+  "notes": "Optional overall trip notes"
+}
+
+Use only the place IDs from the list above. timeOfDay must be: morning, afternoon, evening, or flexible.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2000,
+      temperature: 0.7,
+    });
+
+    const responseText = response.choices[0]?.message?.content?.trim() || '';
+    
+    // Parse and validate the response
+    let content: PlanContent;
+    try {
+      // Remove markdown code blocks if present
+      const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
+      const parsed = JSON.parse(jsonStr);
+      content = planContentSchema.parse(parsed);
+    } catch (parseError) {
+      console.error("[Plan] Failed to parse AI response:", parseError);
+      console.error("[Plan] Raw response:", responseText);
+      await storage.updatePlan(planId, { status: 'failed' });
+      return;
+    }
+
+    // Update plan with generated content
+    await storage.updatePlan(planId, {
+      status: 'ready',
+      content,
+      placesSnapshotHash: placesHash,
+      generatedAt: new Date(),
+    });
+    
+    console.log(`[Plan] Successfully generated plan with ${content.days.length} days`);
+    
+  } catch (error) {
+    console.error("[Plan] Generation error:", error);
+    await storage.updatePlan(planId, { status: 'failed' });
+  }
 }
 
 // Fetch metadata from TikTok or Instagram using Iframely API

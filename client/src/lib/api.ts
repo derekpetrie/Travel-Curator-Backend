@@ -1,4 +1,4 @@
-import type { Collection, Post, Place } from '@shared/schema';
+import type { Collection, Post, Place, Plan, PlanContent } from '@shared/schema';
 
 const API_BASE = '/api';
 
@@ -124,4 +124,37 @@ export async function generateSummary(id: number): Promise<{ summary: string | n
   });
   if (!response.ok) throw new Error('Failed to generate summary');
   return response.json();
+}
+
+// Plan API
+export interface PlanResponse {
+  plan: Plan | null;
+  isStale: boolean;
+  currentPlacesHash: string;
+}
+
+export async function fetchPlan(collectionId: number): Promise<PlanResponse> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/plan`);
+  if (!response.ok) throw new Error('Failed to fetch plan');
+  return response.json();
+}
+
+export async function generatePlan(collectionId: number, durationDays?: number): Promise<{ plan: Plan; message: string }> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/plan/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ durationDays }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate plan');
+  }
+  return response.json();
+}
+
+export async function deletePlan(collectionId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/plan`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete plan');
 }

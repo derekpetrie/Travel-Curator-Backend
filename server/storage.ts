@@ -1,11 +1,12 @@
 import { db } from "./db";
 import { 
-  collections, posts, places, venturrPlaces, postPlaceLinks,
+  collections, posts, places, venturrPlaces, postPlaceLinks, plans,
   type Collection, type InsertCollection,
   type Post, type InsertPost,
   type Place, type InsertPlace,
   type VenturrPlace, type InsertVenturrPlace,
-  type PostPlaceLink, type InsertPostPlaceLink
+  type PostPlaceLink, type InsertPostPlaceLink,
+  type Plan, type InsertPlan, type PlanContent
 } from "@shared/schema";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 
@@ -50,6 +51,12 @@ export interface IStorage {
   getPlacesForCollection(collectionId: number): Promise<(VenturrPlace & { linkId: number; confidence: number | null; linkType: string })[]>;
   getPlacesForUser(userId: string): Promise<(VenturrPlace & { collectionId: number; linkId: number })[]>;
   deletePostPlaceLink(id: number): Promise<void>;
+  
+  // Plans
+  getPlanByCollection(collectionId: number): Promise<Plan | undefined>;
+  createPlan(plan: InsertPlan): Promise<Plan>;
+  updatePlan(id: number, updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date }): Promise<Plan | undefined>;
+  deletePlan(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -401,6 +408,34 @@ export class DatabaseStorage implements IStorage {
 
   async deletePostPlaceLink(id: number): Promise<void> {
     await db.delete(postPlaceLinks).where(eq(postPlaceLinks.id, id));
+  }
+
+  // Plans
+  async getPlanByCollection(collectionId: number): Promise<Plan | undefined> {
+    const result = await db.select().from(plans)
+      .where(eq(plans.collectionId, collectionId))
+      .limit(1);
+    return result[0];
+  }
+
+  async createPlan(plan: InsertPlan): Promise<Plan> {
+    const result = await db.insert(plans).values(plan).returning();
+    return result[0];
+  }
+
+  async updatePlan(
+    id: number,
+    updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date }
+  ): Promise<Plan | undefined> {
+    const result = await db.update(plans)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(plans.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePlan(id: number): Promise<void> {
+    await db.delete(plans).where(eq(plans.id, id));
   }
 }
 

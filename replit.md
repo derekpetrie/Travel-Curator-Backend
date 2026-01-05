@@ -59,6 +59,9 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - `GET /api/collections/:id/posts` - Get posts in Venturr
 - `POST /api/collections/:id/posts` - Add post (triggers AI extraction)
 - `GET /api/collections/:id/places` - Get places in Venturr
+- `GET /api/collections/:id/plan` - Get AI-generated travel plan (with staleness detection)
+- `POST /api/collections/:id/plan/generate` - Generate or regenerate travel plan (async)
+- `DELETE /api/collections/:id/plan` - Delete travel plan
 
 ## Venturr Design System v1.0
 
@@ -104,6 +107,10 @@ Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion
 - Be transparent about AI (label AI-suggested content)
 
 ## Recent Changes
+- 2026-01-05: Added Plan tab to Venturr detail with AI-generated day-by-day itineraries
+- 2026-01-05: Restructured Venturr detail tabs to Posts | Plan | Places with List/Map toggle
+- 2026-01-05: Added plan staleness detection (shows banner when places change after plan generation)
+- 2026-01-05: Added plans table schema with JSON content storage for itinerary data
 - 2026-01-03: Automatic place enrichment on creation (no manual sparkle button needed)
 - 2026-01-03: Flattened Foursquare fields in VenturrPlace schema (photoUrl, rating, website, phone, hoursDisplay, isOpenNow, priceLevel)
 - 2026-01-03: Redesigned PlaceCard with compact horizontal layout (photo thumbnail, rating, hours, expandable details)

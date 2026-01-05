@@ -116,6 +116,55 @@ export const insertPostPlaceLinkSchema = createInsertSchema(postPlaceLinks).omit
   createdAt: true,
 });
 
+// Plans for organizing venturr places into itineraries
+export const plans = pgTable("plans", {
+  id: serial("id").primaryKey(),
+  collectionId: integer("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+  status: text("status").default("idle").notNull(), // "idle" | "generating" | "ready" | "failed"
+  durationDays: integer("duration_days"),
+  content: jsonb("content"), // PlanContent JSON structure
+  placesSnapshotHash: text("places_snapshot_hash"), // Hash of place IDs to detect changes
+  generatedAt: timestamp("generated_at"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertPlanSchema = createInsertSchema(plans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Plan content structure for type safety
+export const planBlockSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  timeOfDay: z.enum(["morning", "afternoon", "evening", "flexible"]).optional(),
+  placeIds: z.array(z.number()),
+  notes: z.string().optional(),
+});
+
+export const planDaySchema = z.object({
+  dayNumber: z.number(),
+  title: z.string().optional(),
+  blocks: z.array(planBlockSchema),
+});
+
+export const planContentSchema = z.object({
+  overview: z.object({
+    summary: z.string(),
+    travelTips: z.array(z.string()).optional(),
+  }),
+  days: z.array(planDaySchema),
+  notes: z.string().optional(),
+});
+
+export type Plan = typeof plans.$inferSelect;
+export type InsertPlan = z.infer<typeof insertPlanSchema>;
+export type PlanContent = z.infer<typeof planContentSchema>;
+export type PlanDay = z.infer<typeof planDaySchema>;
+export type PlanBlock = z.infer<typeof planBlockSchema>;
+
 export type Collection = typeof collections.$inferSelect;
 export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Post = typeof posts.$inferSelect;
