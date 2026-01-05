@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -11,6 +11,7 @@ import Profile from "@/pages/profile";
 import Search from "@/pages/search";
 import SavedPosts from "@/pages/saved-posts";
 import Landing from "@/pages/landing";
+import PublicPlan from "@/pages/public-plan";
 
 function AuthenticatedRouter() {
   return (
@@ -27,6 +28,11 @@ function AuthenticatedRouter() {
 
 function AppContent() {
   const { isLoading, isAuthenticated } = useAuth();
+  const [location] = useLocation();
+
+  if (location.startsWith('/plan/')) {
+    return <PublicPlan />;
+  }
 
   if (isLoading) {
     return (
