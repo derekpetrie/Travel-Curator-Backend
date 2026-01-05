@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPlan, generatePlan, deletePlan } from '@/lib/api';
-import type { Place, PlanContent } from '@shared/schema';
+import type { PlaceWithEnrichment, PlanContent } from '@shared/schema';
 import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 interface PlanTabProps {
   collectionId: number;
-  places: Place[];
+  places: PlaceWithEnrichment[];
   placesLoading: boolean;
 }
 
@@ -48,7 +48,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const hasFailed = plan?.status === 'failed';
   const isReady = plan?.status === 'ready';
 
-  const placesMap = new Map(places.map(p => [p.id, p]));
+  const placesMap = new Map(places.map(p => [p.venturrPlaceId || p.id, p]));
 
   if (planLoading || placesLoading) {
     return (
@@ -239,8 +239,6 @@ function GeneratingState() {
   );
 }
 
-type PlaceForPlan = Place & { photoUrl?: string | null };
-
 interface DayCardProps {
   day: {
     dayNumber: number;
@@ -253,7 +251,7 @@ interface DayCardProps {
       notes?: string | null;
     }>;
   };
-  placesMap: Map<number, PlaceForPlan>;
+  placesMap: Map<number, PlaceWithEnrichment>;
 }
 
 function DayCard({ day, placesMap }: DayCardProps) {

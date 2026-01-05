@@ -721,8 +721,8 @@ export async function registerRoutes(
       
       const plan = await storage.getPlanByCollection(collectionId);
       
-      // Get current places snapshot hash to detect staleness
-      const places = await storage.getPlaces(collectionId);
+      // Get current places snapshot hash to detect staleness (use venturrPlaces via getPlacesForCollection)
+      const places = await storage.getPlacesForCollection(collectionId);
       const currentHash = generatePlacesSnapshotHash(places);
       
       res.json({
@@ -749,8 +749,8 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Collection not found" });
       }
       
-      // Get places for this collection
-      const places = await storage.getPlaces(collectionId);
+      // Get places for this collection (use venturrPlaces via getPlacesForCollection)
+      const places = await storage.getPlacesForCollection(collectionId);
       if (places.length === 0) {
         return res.status(400).json({ error: "No places to plan. Add some posts with locations first." });
       }
@@ -836,11 +836,11 @@ async function generatePlanAsync(
   try {
     console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days`);
     
-    // Prepare places summary for AI
+    // Prepare places summary for AI (using venturrPlaces fields)
     const placesSummary = places.map(p => ({
       id: p.id,
-      name: p.name,
-      category: p.category || 'things to do',
+      name: p.displayName || p.name,
+      category: p.categoryPrimary || 'things to do',
       city: p.city,
       country: p.country,
     }));
