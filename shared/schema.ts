@@ -74,6 +74,10 @@ export const venturrPlaces = pgTable("venturr_places", {
   googleData: jsonb("google_data"),
   googleFetchedAt: timestamp("google_fetched_at"),
   enrichmentStatus: text("enrichment_status").default("not_started"), // "not_started" | "pending" | "enriched" | "failed"
+  // Duration estimation for itinerary planning
+  estimatedDurationMinutes: integer("estimated_duration_minutes"), // null = unknown
+  spanType: text("span_type").default("single"), // "single" | "multi_block" | "all_day"
+  durationSource: text("duration_source"), // "category_heuristic" | "google_hours" | "ai_estimate" | "user_override"
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
@@ -185,6 +189,10 @@ export type PlaceWithEnrichment = Place & {
   isOpenNow?: boolean | null;
   priceLevel?: number | null;
   addressFull?: string | null;
+  // Duration estimation fields
+  estimatedDurationMinutes?: number | null;
+  spanType?: string | null; // "single" | "multi_block" | "all_day"
+  durationSource?: string | null;
 };
 export type InsertPlace = z.infer<typeof insertPlaceSchema>;
 export type VenturrPlace = typeof venturrPlaces.$inferSelect;
