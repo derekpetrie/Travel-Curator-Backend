@@ -974,7 +974,7 @@ Only use place IDs from the list above.`;
 // Validate plan schedule for overpacked blocks
 function validatePlanSchedule(
   content: PlanContent,
-  placesSummary: Array<{ id: number; name: string; durationMinutes: number; spanType: string }>,
+  placesSummary: Array<{ id: number; name: string; category: string; durationMinutes: number; spanType: string }>,
   travelTimeMatrix: Map<string, number>
 ): string[] {
   const warnings: string[] = [];
@@ -985,7 +985,7 @@ function validatePlanSchedule(
     for (const block of day.blocks) {
       const blockPlaces = block.placeIds
         .map(id => placeLookup.get(id))
-        .filter(Boolean) as Array<{ id: number; name: string; durationMinutes: number; spanType: string }>;
+        .filter(Boolean) as Array<{ id: number; name: string; category: string; durationMinutes: number; spanType: string }>;
       
       if (blockPlaces.length === 0) continue;
       
@@ -1015,12 +1015,15 @@ function validatePlanSchedule(
         );
       }
       
-      // Check for multi-block activities not getting enough time
+      // Check for multi-block activities grouped with other non-meal/non-stay activities
       const multiBlockActivities = blockPlaces.filter(p => p.spanType === 'multi_block');
-      if (multiBlockActivities.length > 0 && blockPlaces.length > 1) {
+      const nonMealActivities = blockPlaces.filter(p => 
+        p.durationMinutes >= 60 && !['places to eat', 'places to stay'].includes(p.category)
+      );
+      if (multiBlockActivities.length > 0 && nonMealActivities.length > 1) {
         const longActivity = multiBlockActivities[0];
         warnings.push(
-          `Day ${day.dayNumber}: "${longActivity.name}" typically takes ${formatDuration(longActivity.durationMinutes)} - consider giving it more time`
+          `Day ${day.dayNumber}: "${longActivity.name}" (${formatDuration(longActivity.durationMinutes)}) may need its own time block`
         );
       }
     }

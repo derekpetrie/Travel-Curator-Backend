@@ -108,11 +108,11 @@ const NAME_PATTERNS: Array<{ pattern: RegExp; estimate: DurationEstimate }> = [
   { pattern: /rooftop\s*(bar|restaurant)/i, estimate: { estimatedDurationMinutes: 90, spanType: 'single', durationSource: 'name_pattern' } },
 ];
 
-// Default durations by primary category
+// Default durations by primary category - more conservative estimates
 const DEFAULT_BY_CATEGORY: Record<string, DurationEstimate> = {
-  'things to do': { estimatedDurationMinutes: 120, spanType: 'single', durationSource: 'category_heuristic' },
-  'places to eat': { estimatedDurationMinutes: 75, spanType: 'single', durationSource: 'category_heuristic' },
-  'places to stay': { estimatedDurationMinutes: 60, spanType: 'single', durationSource: 'category_heuristic' },
+  'things to do': { estimatedDurationMinutes: 150, spanType: 'single', durationSource: 'category_heuristic' },
+  'places to eat': { estimatedDurationMinutes: 60, spanType: 'single', durationSource: 'category_heuristic' },
+  'places to stay': { estimatedDurationMinutes: 45, spanType: 'single', durationSource: 'category_heuristic' },
 };
 
 /**
