@@ -240,7 +240,7 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
                     <div className="relative">
                       <LinkIcon className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                       <input 
-                        type="url" 
+                        type="text" 
                         placeholder="https://www.tiktok.com/@..." 
                         className="w-full h-12 pl-10 pr-4 rounded-lg bg-muted border-transparent focus:bg-background focus:border-primary transition-all outline-none"
                         value={url}
