@@ -1,0 +1,259 @@
+Perfect — here’s a clear decision on auto-suggest, followed by a clean, developer-ready spec doc you can hand straight to Replit.
+
+⸻
+
+Decision: Should Plan auto-suggest?
+
+Short answer
+
+Yes — but only in a “soft”, user-initiated way.
+
+The rule
+
+Never auto-generate a plan without an explicit user action.
+But always be ready with a suggestion once the user opts in.
+
+Why this matters
+	•	Users want help, not loss of control
+	•	Planning is emotional + personal
+	•	Silent auto-generation feels “magical but wrong”
+	•	Explicit action builds trust and clarity
+
+⸻
+
+How auto-suggest SHOULD work
+
+Entry state (default)
+
+When the user opens Plan for the first time:
+	•	No plan is generated yet
+	•	Show a calm, invitational CTA
+
+Example copy
+
+“Want help organizing this venture?”
+[ Generate a plan ]
+
+This button is the permission gate.
+
+⸻
+
+After user taps “Generate a plan”
+
+Now auto-suggest kicks in using:
+	•	Places already added
+	•	Venture duration
+	•	Tags / categories
+	•	(Later: user preferences, past ventures)
+
+The system produces:
+	•	A draft plan
+	•	Clearly labeled as editable
+	•	Never locked in
+
+⸻
+
+Ongoing behavior
+	•	Any major change (add/remove places, change duration) shows:
+“Your plan might be out of date”
+[ Update plan ]
+
+No silent overwrites. Ever.
+
+⸻
+
+TL;DR product principle
+
+Plan is a co-pilot, not an autopilot.
+
+⸻
+
+✅ VENTURE DETAIL – TABS & PLAN SPEC
+
+(Developer-ready spec for Replit)
+
+⸻
+
+1. Venture Detail Tabs
+
+Top-level tab navigation
+
+Replace existing tabs with:
+
+Posts | Plan | Places
+
+	•	Posts: journal-style content
+	•	Plan: guided planning flow (new)
+	•	Places: list + map views combined
+
+⸻
+
+2. Places Tab Specification
+
+Purpose
+
+Single source of truth for all locations in the venture.
+
+Views
+
+Places supports two modes within the same tab:
+	•	List view (default)
+	•	Map view
+
+UI Control
+
+Segmented control at top of Places tab:
+
+[ List ] [ Map ]
+
+Behavior
+	•	Switching views does NOT navigate away
+	•	Shared state between views:
+	•	Filters
+	•	Saved status
+	•	Selected place
+	•	List ↔ Map selection syncs
+	•	Scroll position and map zoom persist per view
+
+⸻
+
+3. Plan Tab – Purpose & Scope
+
+Purpose
+
+Help users organize their venture into a usable structure
+without taking control away from them.
+
+Plan does NOT:
+	•	Own places
+	•	Edit place data
+	•	Block access to Places
+
+Plan DOES:
+	•	Suggest structure
+	•	Organize places
+	•	Provide guidance
+
+⸻
+
+4. Plan Tab – States
+
+4.1 Empty State (First Visit)
+
+Condition
+	•	No plan exists yet
+
+UI
+	•	Title: Plan this venture
+	•	Supporting text:
+“We can help organize your places into a simple plan.”
+	•	Primary CTA:
+
+[ Generate a plan ]
+
+
+
+⚠️ No plan is created until this button is tapped.
+
+⸻
+
+4.2 Generated Plan State
+
+Condition
+	•	User has explicitly tapped “Generate a plan”
+
+Plan Structure (v1)
+	•	Linear sections (no nested tabs):
+
+	1.	Overview
+	•	Duration
+	•	Number of days
+	•	Planning assumptions (pace, density)
+	2.	Day / Block Sections
+	•	Example:
+
+Day 1
+- Morning: 2–3 places
+- Afternoon: 2–3 places
+- Evening: 1–2 places
+
+
+	•	Places are references, not copies
+
+	3.	Notes / Flex Blocks
+	•	Optional
+	•	Non-binding suggestions
+
+⸻
+
+5. Auto-Suggestion Rules (Critical)
+
+5.1 When auto-suggest is allowed
+
+Auto-suggest ONLY happens when:
+	•	User taps Generate a plan
+	•	OR user taps Update plan
+
+5.2 When auto-suggest is NOT allowed
+	•	On tab open
+	•	On app refresh
+	•	When places change silently
+
+⸻
+
+6. Plan Update Logic
+
+Trigger conditions
+
+If any of the following change:
+	•	Venture duration
+	•	Places added / removed
+	•	Major tag/category change
+
+Behavior
+
+Show a non-blocking prompt:
+
+“Your plan might be out of date.”
+[ Update plan ] [ Ignore ]
+
+	•	No automatic regeneration
+	•	No forced confirmation
+
+⸻
+
+7. Plan ↔ Places Integration
+
+Deep linking behavior
+	•	“View on map” → opens Places tab in Map mode
+	•	“View list” → opens Places tab in List mode
+
+Data ownership
+	•	Places remain canonical
+	•	Plan references places by ID
+	•	Deleting a place removes it from plan gracefully
+
+⸻
+
+8. Non-goals (Explicit)
+	•	No drag-and-drop reordering in v1
+	•	No calendar integration in v1
+	•	No AI explanation text in final UI (keep copy human)
+
+⸻
+
+9. Success Criteria (v1)
+	•	Users understand Plan without tutorial
+	•	No surprise plan generation
+	•	Places always feel safe and unchanged
+	•	Switching between tabs feels lightweight
+
+⸻
+
+If you want, next I can:
+	•	Convert this into Replit task tickets
+	•	Write pseudo-logic for plan generation
+	•	Define the Plan data model
+	•	Draft UI copy so it feels calm, not “AI-y”
+
+Just say the word.
