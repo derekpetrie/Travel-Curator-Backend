@@ -52,15 +52,16 @@ function PlaceMarker({
       onClick={onClick}
     >
       <div 
-        className="w-10 h-10 rounded-full shadow-lg flex items-center justify-center bg-white"
+        className="rounded-full shadow-lg flex items-center justify-center bg-white"
         style={{ 
-          border: `3px solid ${outlineColor}`,
+          width: 34,
+          height: 34,
+          border: `2.5px solid ${outlineColor}`,
           boxShadow: isSelected ? `0 0 0 3px ${outlineColor}40, 0 4px 12px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0,0,0,0.15)'
         }}
       >
         <Icon 
-          className="w-5 h-5" 
-          style={{ color: outlineColor }}
+          style={{ color: outlineColor, width: 17, height: 17 }}
           strokeWidth={2.5}
         />
       </div>
@@ -139,7 +140,7 @@ export function PlaceMap({
       initialViewState={initialViewState}
       onLoad={handleMapLoad}
       style={{ width: '100%', height: '100%' }}
-      mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth.json"
+      mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
     >
       <NavigationControl position="top-right" />
 
