@@ -97,17 +97,17 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       )}
 
       {content.overview && (
-        <div className="p-4 bg-gradient-to-r from-coral-50 to-coral-100/50 rounded-xl border border-coral-200">
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/20 rounded-xl border border-primary/30">
           <p className="text-foreground/90" data-testid="text-plan-summary">
             {content.overview.summary}
           </p>
           {content.overview.travelTips && content.overview.travelTips.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-coral-200/50">
+            <div className="mt-3 pt-3 border-t border-primary/20">
               <p className="text-xs font-medium text-muted-foreground mb-1.5">Tips</p>
               <ul className="text-sm text-foreground/80 space-y-1">
                 {content.overview.travelTips.map((tip, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="text-coral-500 mt-0.5">•</span>
+                    <span className="text-primary mt-0.5">•</span>
                     <span>{tip}</span>
                   </li>
                 ))}
@@ -174,8 +174,8 @@ interface EmptyPlanStateProps {
 function EmptyPlanState({ durationDays, setDurationDays, onGenerate, isGenerating, error }: EmptyPlanStateProps) {
   return (
     <div className="py-8 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral-100 to-coral-200 flex items-center justify-center">
-        <Sparkles className="w-8 h-8 text-coral-500" />
+      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-primary/30 flex items-center justify-center">
+        <Sparkles className="w-8 h-8 text-primary" />
       </div>
       <h3 className="text-lg font-bold text-foreground mb-2">Create Your Travel Plan</h3>
       <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
@@ -206,7 +206,7 @@ function EmptyPlanState({ durationDays, setDurationDays, onGenerate, isGeneratin
       <button
         onClick={onGenerate}
         disabled={isGenerating}
-        className="px-6 py-3 bg-coral-500 text-white font-bold rounded-lg hover:bg-coral-600 transition-colors disabled:opacity-50"
+        className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
         data-testid="button-generate-plan"
       >
         {isGenerating ? (
@@ -228,8 +228,8 @@ function EmptyPlanState({ durationDays, setDurationDays, onGenerate, isGeneratin
 function GeneratingState() {
   return (
     <div className="py-16 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral-100 to-coral-200 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-coral-500 animate-spin" />
+      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-primary/30 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
       <h3 className="text-lg font-bold text-foreground mb-2">Creating Your Plan</h3>
       <p className="text-sm text-muted-foreground">
@@ -265,7 +265,7 @@ function DayCard({ day, placesMap }: DayCardProps) {
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden" data-testid={`card-day-${day.dayNumber}`}>
       <div className="px-4 py-3 bg-muted/30 border-b border-border flex items-center gap-2">
-        <Calendar className="w-4 h-4 text-coral-500" />
+        <Calendar className="w-4 h-4 text-primary" />
         <span className="font-bold text-foreground">Day {day.dayNumber}</span>
         {day.title && <span className="text-muted-foreground">— {day.title}</span>}
       </div>
