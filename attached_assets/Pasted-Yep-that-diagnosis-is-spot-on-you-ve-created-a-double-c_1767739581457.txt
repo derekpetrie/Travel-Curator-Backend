@@ -1,0 +1,62 @@
+Yep — that diagnosis is spot on: you’ve created a “double-close” race where you close the dialog programmatically, then Radix immediately emits onOpenChange(false), but React hasn’t flushed isAdding=false yet, so your guarded handler thinks you’re still adding and refuses to close… which ironically keeps it open.
+
+Here’s the clean shape of the fix you described, with concrete code patterns.
+
+1) Let Radix own the open state (always accept programmatic closes)
+
+<Dialog.Root
+  open={addToVenturrOpen}
+  onOpenChange={setAddToVenturrOpen}
+>
+  ...
+</Dialog.Root>
+
+No conditional logic inside onOpenChange. If Radix says “close”, you close.
+
+2) Reset ancillary state in an effect when the modal closes
+
+useEffect(() => {
+  if (!addToVenturrOpen) {
+    setNewVenturrName("");
+    setIsCreatingNew(false);
+    setIsAdding(false);
+  }
+}, [addToVenturrOpen]);
+
+This guarantees resets happen after the close is actually applied, not in the same batched update group as the mutation completion.
+
+3) Gate user-initiated closes differently
+
+You’ve got two solid options; pick based on UX.
+
+Option A: Prevent outside-click / escape closes while loading
+
+Radix supports modal behavior; additionally you can explicitly prevent “interact outside” during loading:
+
+<Dialog.Content
+  onInteractOutside={(e) => {
+    if (isAdding) e.preventDefault();
+  }}
+  onEscapeKeyDown={(e) => {
+    if (isAdding) e.preventDefault();
+  }}
+>
+
+(If you already rely on modal={true}, keep it; this is the more explicit “don’t close while loading” gate.)
+
+Option B: Disable the close button while loading
+
+<Dialog.Close asChild disabled={isAdding}>
+  <button disabled={isAdding}>Close</button>
+</Dialog.Close>
+
+You can do both (A + B) if you want to be extra safe.
+
+⸻
+
+Why this works
+	•	Open/close is a single source of truth (addToVenturrOpen)
+	•	Reset logic is decoupled and runs when open becomes false (after Radix + React settle)
+	•	User-close gating doesn’t interfere with programmatic closes
+
+If you paste your current Dialog.Root + onOpenChange handler, I can rewrite it directly in-place with minimal diff.

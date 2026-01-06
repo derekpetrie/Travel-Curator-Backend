@@ -120,19 +120,17 @@ export default function Explore() {
   };
 
   useEffect(() => {
-    if (addToVenturrOpen && pendingPlaceIdRef.current !== null) {
-      setSelectedPlaceIds(new Set([pendingPlaceIdRef.current]));
-      pendingPlaceIdRef.current = null;
+    if (addToVenturrOpen) {
+      if (pendingPlaceIdRef.current !== null) {
+        setSelectedPlaceIds(new Set([pendingPlaceIdRef.current]));
+        pendingPlaceIdRef.current = null;
+      }
+    } else {
+      setNewVenturrName('');
+      setIsCreatingNew(false);
+      setIsAdding(false);
     }
   }, [addToVenturrOpen]);
-
-  const closeModal = () => {
-    setAddToVenturrOpen(false);
-    setSelectedPlaceIds(new Set());
-    setNewVenturrName('');
-    setIsCreatingNew(false);
-    setIsAdding(false);
-  };
 
   const handleSelectCollection = async (collection: Collection) => {
     const placeIds = Array.from(selectedPlaceIds);
@@ -144,7 +142,7 @@ export default function Explore() {
     try {
       await copyMutation.mutateAsync({ collectionId: collection.id, placeIds });
       toast.success(`Added to ${collection.title}`);
-      closeModal();
+      setAddToVenturrOpen(false);
     } catch {
       toast.error('Failed to add places');
       setIsAdding(false);
@@ -160,7 +158,7 @@ export default function Explore() {
       const placeIds = Array.from(selectedPlaceIds);
       await copyMutation.mutateAsync({ collectionId: newCollection.id, placeIds });
       toast.success(`Added to ${newCollection.title}`);
-      closeModal();
+      setAddToVenturrOpen(false);
     } catch {
       toast.error('Failed to create Venturr');
       setIsAdding(false);
@@ -357,12 +355,16 @@ export default function Explore() {
         onAddToVenturr={handleAddToVenturr}
       />
 
-      <Dialog open={addToVenturrOpen} onOpenChange={(open) => {
-        if (!open && !isAdding) {
-          closeModal();
-        }
-      }}>
-        <DialogContent className="max-w-md rounded-[14px] shadow-sm">
+      <Dialog open={addToVenturrOpen} onOpenChange={setAddToVenturrOpen}>
+        <DialogContent 
+          className="max-w-md rounded-[14px] shadow-sm"
+          onInteractOutside={(e) => {
+            if (isAdding) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (isAdding) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="font-heading text-lg font-semibold text-gunmetal-900">
               Add to Venturr
