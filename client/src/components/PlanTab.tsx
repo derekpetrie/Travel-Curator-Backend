@@ -15,6 +15,7 @@ import {
   useSensors,
   closestCenter,
   DragOverEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -195,7 +196,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
 
     if (activeId === overId) return;
 
-    const parseDragId = (id: string) => {
+    const parsePlaceId = (id: string) => {
       const parts = id.split('-');
       return {
         dayIndex: parseInt(parts[1]),
@@ -204,29 +205,49 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       };
     };
 
-    const from = parseDragId(activeId);
-    const to = parseDragId(overId);
+    const parseBlockId = (id: string) => {
+      const parts = id.split('-');
+      return {
+        dayIndex: parseInt(parts[1]),
+        blockIndex: parseInt(parts[2]),
+      };
+    };
 
+    const from = parsePlaceId(activeId);
     const newContent = JSON.parse(JSON.stringify(editedContent)) as PlanContent;
-
     const fromBlock = newContent.days[from.dayIndex].blocks[from.blockIndex];
-    const toBlock = newContent.days[to.dayIndex].blocks[to.blockIndex];
-
     const fromIndex = fromBlock.placeIds.indexOf(from.placeId);
     if (fromIndex === -1) return;
 
-    if (from.dayIndex === to.dayIndex && from.blockIndex === to.blockIndex) {
-      const toIndex = fromBlock.placeIds.indexOf(to.placeId);
-      if (toIndex === -1) return;
-      fromBlock.placeIds = arrayMove(fromBlock.placeIds, fromIndex, toIndex);
-    } else {
+    if (overId.startsWith('block-')) {
+      const toBlockInfo = parseBlockId(overId);
+      const toBlock = newContent.days[toBlockInfo.dayIndex].blocks[toBlockInfo.blockIndex];
+      
+      if (from.dayIndex === toBlockInfo.dayIndex && from.blockIndex === toBlockInfo.blockIndex) {
+        return;
+      }
+      
       if (fromBlock.placeIds.length <= 1) return;
+      
       fromBlock.placeIds.splice(fromIndex, 1);
-      const toIndex = toBlock.placeIds.indexOf(to.placeId);
-      if (toIndex === -1) {
-        toBlock.placeIds.push(from.placeId);
+      toBlock.placeIds.push(from.placeId);
+    } else {
+      const to = parsePlaceId(overId);
+      const toBlock = newContent.days[to.dayIndex].blocks[to.blockIndex];
+
+      if (from.dayIndex === to.dayIndex && from.blockIndex === to.blockIndex) {
+        const toIndex = fromBlock.placeIds.indexOf(to.placeId);
+        if (toIndex === -1) return;
+        fromBlock.placeIds = arrayMove(fromBlock.placeIds, fromIndex, toIndex);
       } else {
-        toBlock.placeIds.splice(toIndex, 0, from.placeId);
+        if (fromBlock.placeIds.length <= 1) return;
+        fromBlock.placeIds.splice(fromIndex, 1);
+        const toIndex = toBlock.placeIds.indexOf(to.placeId);
+        if (toIndex === -1) {
+          toBlock.placeIds.push(from.placeId);
+        } else {
+          toBlock.placeIds.splice(toIndex, 0, from.placeId);
+        }
       }
     }
 
@@ -601,10 +622,6 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
     flexible: <Clock className="w-3.5 h-3.5" />,
   };
 
-  const allPlaceIds = day.blocks.flatMap((block, blockIndex) =>
-    block.placeIds.map(placeId => `place-${dayIndex}-${blockIndex}-${placeId}`)
-  );
-
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden" data-testid={`card-day-${day.dayNumber}`}>
       <div className="px-4 py-3 bg-muted/30 border-b border-border flex items-center gap-2">
@@ -645,7 +662,7 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
                 )}
               </div>
               <SortableContext items={blockPlaceIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2 pl-5">
+                <DroppableBlock id={`block-${dayIndex}-${blockIndex}`} isEditing={isEditing}>
                   {block.placeIds.map((placeId) => {
                     const place = placesMap.get(placeId);
                     if (!place) return null;
@@ -661,7 +678,7 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
                       />
                     );
                   })}
-                </div>
+                </DroppableBlock>
               </SortableContext>
               {isEditing ? (
                 <textarea
@@ -682,6 +699,28 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
           );
         })}
       </div>
+    </div>
+  );
+}
+
+interface DroppableBlockProps {
+  id: string;
+  children: React.ReactNode;
+  isEditing: boolean;
+}
+
+function DroppableBlock({ id, children, isEditing }: DroppableBlockProps) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  
+  return (
+    <div 
+      ref={setNodeRef} 
+      className={cn(
+        "space-y-2 pl-5 min-h-[40px] rounded-lg transition-colors",
+        isEditing && isOver && "bg-primary/10 ring-2 ring-primary/30"
+      )}
+    >
+      {children}
     </div>
   );
 }
