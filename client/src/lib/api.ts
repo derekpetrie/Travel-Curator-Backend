@@ -200,3 +200,23 @@ export async function fetchPublicPlans(): Promise<(Plan & { collectionTitle: str
   if (!response.ok) throw new Error('Failed to fetch public plans');
   return response.json();
 }
+
+// Place organization
+export async function fetchCollectionsForPlace(placeId: number): Promise<{ id: number; title: string }[]> {
+  const response = await fetch(`${API_BASE}/places/${placeId}/collections`);
+  if (!response.ok) throw new Error('Failed to fetch collections for place');
+  return response.json();
+}
+
+export async function copyPlacesToCollection(
+  targetCollectionId: number, 
+  placeIds: number[]
+): Promise<{ copiedCount: number }> {
+  const response = await fetch(`${API_BASE}/collections/${targetCollectionId}/copy-places`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ placeIds }),
+  });
+  if (!response.ok) throw new Error('Failed to copy places');
+  return response.json();
+}

@@ -555,6 +555,46 @@ export async function registerRoutes(
     }
   });
 
+  // Get which collections contain a specific place
+  app.get("/api/places/:id/collections", isAuthenticated, async (req, res) => {
+    try {
+      const placeId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      
+      if (isNaN(placeId)) {
+        return res.status(400).json({ error: "Invalid place ID" });
+      }
+      
+      const collections = await storage.getCollectionsForPlace(placeId, userId);
+      res.json(collections);
+    } catch (error) {
+      console.error("Error fetching collections for place:", error);
+      res.status(500).json({ error: "Failed to fetch collections for place" });
+    }
+  });
+
+  // Copy places to a collection (with their associated posts)
+  app.post("/api/collections/:id/copy-places", isAuthenticated, async (req, res) => {
+    try {
+      const collectionId = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { placeIds } = req.body;
+      
+      if (!Array.isArray(placeIds) || placeIds.length === 0) {
+        return res.status(400).json({ error: "placeIds must be a non-empty array" });
+      }
+      
+      const numericPlaceIds = placeIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+      
+      const result = await storage.copyPlacesToCollection(numericPlaceIds, collectionId, userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error copying places:", error);
+      const message = error instanceof Error ? error.message : "Failed to copy places";
+      res.status(500).json({ error: message });
+    }
+  });
+
   app.get("/api/collections/:collectionId/places", isAuthenticated, async (req, res) => {
     try {
       const collectionId = parseInt(req.params.collectionId);

@@ -1,13 +1,17 @@
 import { Drawer } from 'vaul';
-import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp, FolderPlus } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { PlaceWithEnrichment } from '@shared/schema';
+import { fetchCollectionsForPlace } from '@/lib/api';
 
 interface PlaceDrawerProps {
   place: PlaceWithEnrichment | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   venturrName?: string;
+  onAddToVenturr?: (place: PlaceWithEnrichment) => void;
+  showVenturrMembership?: boolean;
 }
 
 function formatPhoneForDisplay(phone: string): string {
@@ -23,8 +27,14 @@ function formatWebsiteForDisplay(url: string): string {
   }
 }
 
-export function PlaceDrawer({ place, open, onOpenChange, venturrName }: PlaceDrawerProps) {
+export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVenturr, showVenturrMembership = false }: PlaceDrawerProps) {
   const [expanded, setExpanded] = useState(false);
+
+  const { data: memberVenturrs = [] } = useQuery({
+    queryKey: ['place-collections', place?.venturrPlaceId],
+    queryFn: () => fetchCollectionsForPlace(place!.venturrPlaceId!),
+    enabled: showVenturrMembership && open && !!place?.venturrPlaceId,
+  });
 
   if (!place) return null;
 
@@ -162,10 +172,38 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName }: PlaceDra
               )}
             </div>
 
-            {venturrName && (
+            {venturrName && !showVenturrMembership && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
                 Saved in <span className="font-medium text-foreground">{venturrName}</span>
               </p>
+            )}
+
+            {showVenturrMembership && memberVenturrs.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-neutral-200">
+                <p className="text-xs text-muted-foreground mb-2">Saved in:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {memberVenturrs.map(v => (
+                    <span
+                      key={v.id}
+                      className="inline-block px-2 py-1 rounded-full bg-coral-500/10 text-coral-600 text-xs font-medium"
+                      data-testid={`tag-venturr-${v.id}`}
+                    >
+                      {v.title}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {onAddToVenturr && (
+              <button
+                onClick={() => onAddToVenturr(place)}
+                className="mt-3 w-full py-2.5 rounded-lg bg-coral-500 text-white font-medium flex items-center justify-center gap-2 hover:bg-coral-600 transition-colors"
+                data-testid="button-add-to-venturr"
+              >
+                <FolderPlus className="w-4 h-4" />
+                Add to Venturr
+              </button>
             )}
           </div>
         </Drawer.Content>

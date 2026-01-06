@@ -52,6 +52,10 @@ export interface IStorage {
   getPlacesForUser(userId: string): Promise<(VenturrPlace & { collectionId: number; linkId: number })[]>;
   deletePostPlaceLink(id: number): Promise<void>;
   
+  // Place organization
+  getCollectionsForPlace(placeId: number, userId: string): Promise<{ id: number; title: string }[]>;
+  copyPlacesToCollection(placeIds: number[], targetCollectionId: number, userId: string): Promise<{ copiedCount: number }>;
+  
   // Plans
   getPlanByCollection(collectionId: number): Promise<Plan | undefined>;
   getPlanBySlug(slug: string): Promise<Plan | undefined>;
@@ -474,6 +478,96 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(plans.updatedAt))
       .limit(limit);
     return result;
+  }
+
+  async getCollectionsForPlace(placeId: number, userId: string): Promise<{ id: number; title: string }[]> {
+    const result = await db.selectDistinct({
+      id: collections.id,
+      title: collections.title,
+    })
+      .from(postPlaceLinks)
+      .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
+      .innerJoin(collections, eq(posts.collectionId, collections.id))
+      .where(and(
+        eq(postPlaceLinks.placeId, placeId),
+        eq(collections.userId, userId)
+      ))
+      .orderBy(collections.title);
+    return result;
+  }
+
+  async copyPlacesToCollection(
+    placeIds: number[], 
+    targetCollectionId: number, 
+    userId: string
+  ): Promise<{ copiedCount: number }> {
+    const targetCollection = await this.getCollection(targetCollectionId, userId);
+    if (!targetCollection) {
+      throw new Error("Target collection not found");
+    }
+
+    let copiedCount = 0;
+
+    for (const placeId of placeIds) {
+      const existingLinks = await db.select({
+        postId: postPlaceLinks.postId,
+        placeId: postPlaceLinks.placeId,
+        confidence: postPlaceLinks.confidence,
+        linkType: postPlaceLinks.linkType,
+        url: posts.url,
+        source: posts.source,
+        thumbnailUrl: posts.thumbnailUrl,
+        caption: posts.caption,
+        author: posts.author,
+      })
+        .from(postPlaceLinks)
+        .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
+        .innerJoin(collections, eq(posts.collectionId, collections.id))
+        .where(and(
+          eq(postPlaceLinks.placeId, placeId),
+          eq(collections.userId, userId)
+        ))
+        .limit(1);
+
+      if (existingLinks.length === 0) continue;
+
+      const sourceLink = existingLinks[0];
+
+      const existingInTarget = await db.select({ id: postPlaceLinks.id })
+        .from(postPlaceLinks)
+        .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
+        .where(and(
+          eq(posts.collectionId, targetCollectionId),
+          eq(postPlaceLinks.placeId, placeId)
+        ))
+        .limit(1);
+
+      if (existingInTarget.length > 0) continue;
+
+      const newPost = await db.insert(posts).values({
+        collectionId: targetCollectionId,
+        url: sourceLink.url,
+        source: sourceLink.source,
+        thumbnailUrl: sourceLink.thumbnailUrl,
+        caption: sourceLink.caption,
+        author: sourceLink.author,
+      }).returning();
+
+      await db.insert(postPlaceLinks).values({
+        postId: newPost[0].id,
+        placeId: placeId,
+        confidence: sourceLink.confidence,
+        linkType: 'user_added',
+      });
+
+      copiedCount++;
+    }
+
+    if (copiedCount > 0) {
+      await this.touchCollection(targetCollectionId);
+    }
+
+    return { copiedCount };
   }
 }
 

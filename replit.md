@@ -65,6 +65,8 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - `POST /api/collections/:id/plan/share` - Toggle plan sharing (isPublic, generates shareSlug)
 - `DELETE /api/collections/:id/plan` - Delete travel plan
 - `GET /api/plans/:slug` - Get public plan by share slug (no auth required)
+- `GET /api/places/:id/collections` - Get which Venturrs contain a specific place
+- `POST /api/collections/:id/copy-places` - Copy places (and their posts) to a collection
 
 ## Venturr Design System v1.0
 
@@ -110,6 +112,9 @@ Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion
 - Be transparent about AI (label AI-suggested content)
 
 ## Recent Changes
+- 2026-01-06: Added multi-select places on Explore page with Add to Venturr functionality
+- 2026-01-06: PlaceDrawer shows which Venturrs a place belongs to
+- 2026-01-06: Added copy-places API for cross-Venturr place organization (copies posts too)
 - 2026-01-05: Added plan editing with inline block title, notes, and time of day changes
 - 2026-01-05: Added plan sharing with public links (/plan/:slug) and copy-to-clipboard
 - 2026-01-05: Added public plan view page (no auth required) at /plan/:slug
