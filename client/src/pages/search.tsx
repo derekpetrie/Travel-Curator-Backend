@@ -126,6 +126,8 @@ export default function Explore() {
         pendingPlaceIdRef.current = null;
       }
     } else {
+      pendingPlaceIdRef.current = null;
+      setSelectedPlaceIds(new Set());
       setNewVenturrName('');
       setIsCreatingNew(false);
       setIsAdding(false);
