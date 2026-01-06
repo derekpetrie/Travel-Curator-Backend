@@ -77,8 +77,21 @@ export async function registerRoutes(
       const parsed = insertCollectionSchema.parse({ ...req.body, userId });
       const collection = await storage.createCollection(parsed);
       
-      // Only generate thumbnail if user didn't provide a cover
-      if (!parsed.coverImage && !parsed.coverGradient) {
+      // Generate thumbnail in background for any cover image
+      if (parsed.coverImage) {
+        // User provided a cover image - generate thumbnail for it
+        import('./thumbnail').then(async ({ generateThumbnailCanvas }) => {
+          try {
+            const coverImageThumbnail = await generateThumbnailCanvas(parsed.coverImage!, 200);
+            if (coverImageThumbnail) {
+              await storage.updateCollection(collection.id, userId, { coverImageThumbnail });
+            }
+          } catch (err) {
+            console.error("Error generating collection cover thumbnail:", err);
+          }
+        });
+      } else if (!parsed.coverGradient) {
+        // No cover at all - generate placeholder gradient
         generateCollectionThumbnail(parsed.title).then(async (thumbnail) => {
           try {
             await storage.updateCollection(
