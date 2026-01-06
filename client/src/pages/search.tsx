@@ -8,7 +8,6 @@ import { PlaceDrawer } from '@/components/PlaceDrawer';
 import type { PlaceWithEnrichment, Collection } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -359,43 +358,41 @@ export default function Explore() {
                   value={newVenturrName}
                   onChange={(e) => setNewVenturrName(e.target.value)}
                   placeholder="New Venturr name..."
-                  className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-coral-500 focus:border-coral-500"
+                  className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-[#F25F5C] focus:border-[#F25F5C]"
                   autoFocus
                   data-testid="input-new-venturr-name"
                 />
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
+                  <button
                     onClick={() => {
                       setIsCreatingNew(false);
                       setNewVenturrName('');
                     }}
-                    className="flex-1 h-11 rounded-[14px]"
+                    className="flex-1 h-11 rounded-[14px] border border-neutral-200 bg-white font-medium hover:bg-neutral-50 transition-colors"
                     data-testid="button-cancel-create"
                   >
                     Cancel
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     onClick={handleCreateAndAdd}
                     disabled={!newVenturrName.trim() || copyMutation.isPending}
-                    className="flex-1 h-11 rounded-[14px] bg-coral-500 text-white hover:bg-coral-600"
+                    className="flex-1 h-11 rounded-[14px] bg-[#F25F5C] text-white font-medium hover:bg-[#e04e4b] transition-colors disabled:opacity-50"
                     data-testid="button-create-and-add"
                   >
                     {copyMutation.isPending ? 'Creating...' : 'Create & Add'}
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : (
               <>
-                <Button
-                  variant="outline"
+                <button
                   onClick={() => setIsCreatingNew(true)}
-                  className="w-full h-12 rounded-[14px] border-2 border-dashed border-coral-300 text-coral-500 font-medium hover:bg-coral-50"
+                  className="w-full h-12 rounded-[14px] border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2"
                   data-testid="button-create-new-venturr"
                 >
                   <Plus className="w-5 h-5" />
                   Create new Venturr
-                </Button>
+                </button>
 
                 <div className="max-h-64 overflow-y-auto space-y-2">
                   {collections.map((collection) => (
@@ -403,7 +400,7 @@ export default function Explore() {
                       key={collection.id}
                       onClick={() => handleSelectCollection(collection)}
                       disabled={copyMutation.isPending}
-                      className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-coral-300 hover:bg-coral-50/50 transition-colors flex items-center justify-between disabled:opacity-50"
+                      className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between disabled:opacity-50"
                       data-testid={`button-select-venturr-${collection.id}`}
                     >
                       <span className="truncate text-gunmetal-900">{collection.title}</span>
