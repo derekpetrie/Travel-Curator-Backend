@@ -1,0 +1,95 @@
+Got it — if the modal is still staying open after the success path runs, then the batching/race you originally described is no longer the only thing in play. With open={addToVenturrOpen} + onOpenChange={setAddToVenturrOpen}, Radix can’t “keep it open” on its own. The only way it remains visible is:
+	1.	setAddToVenturrOpen(false) is not actually being hit, or
+	2.	it is hit, but something immediately sets it back to true, or
+	3.	the dialog is not truly controlled (e.g. there’s also a defaultOpen/other Dialog instance involved).
+
+Here are the most common culprits and the exact fixes.
+
+⸻
+
+1) Verify you’re not reopening it immediately
+
+A super common pattern: some effect like “when pendingPlaceIdRef.current exists, open modal” runs again after your success flow and reopens it.
+
+Fix: when you close, also clear whatever trigger would reopen it.
+
+const closeAddToVenturr = () => {
+  pendingPlaceIdRef.current = null; // important if this ref is used to open
+  setAddToVenturrOpen(false);
+};
+
+And in your success path call closeAddToVenturr() (not just setAddToVenturrOpen(false)).
+
+⸻
+
+2) Make sure the “X” button is a real Radix close (or uses the setter)
+
+If your “X” is just a button and not Dialog.Close, it won’t trigger Radix close behavior unless you explicitly close state.
+
+✅ Best:
+
+<DialogClose asChild>
+  <button disabled={isAdding}>✕</button>
+</DialogClose>
+
+or:
+
+<button onClick={() => !isAdding && setAddToVenturrOpen(false)}>✕</button>
+
+
+⸻
+
+3) Your onInteractOutside / onEscapeKeyDown gating is fine — but don’t accidentally block all closes
+
+Your current gating only blocks outside/escape. That’s good.
+
+But if you also added other preventDefault handlers (like onPointerDownOutside, onCloseAutoFocus, etc.) elsewhere, those can keep it open.
+
+Quick sanity check: only keep these two gates:
+
+onInteractOutside={(e) => isAdding && e.preventDefault()}
+onEscapeKeyDown={(e) => isAdding && e.preventDefault()}
+
+
+⸻
+
+4) Hard proof: log whether you close, and whether it reopens
+
+Drop this in temporarily:
+
+useEffect(() => {
+  console.log("addToVenturrOpen:", addToVenturrOpen);
+}, [addToVenturrOpen]);
+
+and right where you think you close:
+
+console.log("closing dialog now");
+setAddToVenturrOpen(false);
+
+If you see: closing dialog now → addToVenturrOpen: false → then later addToVenturrOpen: true, you’ve confirmed the reopen path.
+
+⸻
+
+5) The reset effect should include all “close cleanup”
+
+Based on your earlier diff, you moved name/flags reset into the close branch — good. I would also add:
+	•	setSelectedPlaceIds(new Set())
+	•	pendingPlaceIdRef.current = null
+
+useEffect(() => {
+  if (!addToVenturrOpen) {
+    pendingPlaceIdRef.current = null;
+    setSelectedPlaceIds(new Set());
+    setNewVenturrName("");
+    setIsCreatingNew(false);
+    setIsAdding(false);
+  }
+}, [addToVenturrOpen]);
+
+This prevents “close → cleanup triggers reopen”.
+
+⸻
+
+If you paste the code that opens the modal (where you set pendingPlaceIdRef and setAddToVenturrOpen(true)), I can point to the exact line that’s reopening it.
+
+Right now, given your new controlled setup, the most likely issue is an automatic reopen trigger (ref/effect) that you’re not clearing on close.
