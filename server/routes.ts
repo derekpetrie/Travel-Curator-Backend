@@ -48,7 +48,7 @@ export async function registerRoutes(
   app.get("/api/collections", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const collections = await storage.getCollections(userId);
+      const collections = await storage.getCollectionsWithCounts(userId);
       res.json(collections);
     } catch (error) {
       console.error("Error fetching collections:", error);

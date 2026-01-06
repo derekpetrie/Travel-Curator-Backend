@@ -3,9 +3,8 @@ import { TabBar } from '@/components/TabBar';
 import { CreateVenturrDrawer } from '@/components/CreateVenturrDrawer';
 import { Plus, Loader2, ArrowUpDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollections, createCollection, fetchPosts } from '@/lib/api';
+import { fetchCollections, createCollection } from '@/lib/api';
 import { useState, useMemo } from 'react';
-import type { Collection } from '@shared/schema';
 import {
   Select,
   SelectContent,
@@ -45,42 +44,9 @@ export default function Home() {
     await createMutation.mutateAsync({ title, coverImage, coverGradient });
   };
 
-  // Enhance collections with item count and first post thumbnail
-  const collectionsWithCounts = useQuery({
-    queryKey: ['collectionsWithCounts', collections],
-    queryFn: async () => {
-      if (!collections) return [];
-      
-      const enhanced = await Promise.all(
-        collections.map(async (collection: Collection) => {
-          try {
-            const posts = await fetchPosts(collection.id);
-            // Find first post with a valid thumbnail
-            const postWithThumbnail = posts.find((p: any) => p.thumbnailUrl);
-            const firstPostThumbnail = postWithThumbnail?.thumbnailUrl || null;
-            return {
-              ...collection,
-              itemCount: posts.length,
-              firstPostThumbnail,
-            };
-          } catch {
-            return {
-              ...collection,
-              itemCount: 0,
-              firstPostThumbnail: null,
-            };
-          }
-        })
-      );
-      return enhanced;
-    },
-    enabled: !!collections,
-  });
-
-  // Sort collections based on selected option
   const sortedCollections = useMemo(() => {
-    const data = collectionsWithCounts.data || [];
-    return [...data].sort((a: any, b: any) => {
+    if (!collections) return [];
+    return [...collections].sort((a: any, b: any) => {
       switch (sortBy) {
         case 'lastEdited':
           return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
@@ -92,7 +58,7 @@ export default function Home() {
           return 0;
       }
     });
-  }, [collectionsWithCounts.data, sortBy]);
+  }, [collections, sortBy]);
 
   return (
     <div className="min-h-screen pb-24 bg-background safe-top">

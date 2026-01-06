@@ -10,9 +10,15 @@ import {
 } from "@shared/schema";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 
+export type CollectionWithCounts = Collection & { 
+  itemCount: number; 
+  firstPostThumbnail: string | null;
+};
+
 export interface IStorage {
   // Collections
   getCollections(userId: string): Promise<Collection[]>;
+  getCollectionsWithCounts(userId: string): Promise<CollectionWithCounts[]>;
   getCollection(id: number, userId: string): Promise<Collection | undefined>;
   createCollection(collection: InsertCollection): Promise<Collection>;
   updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
@@ -67,6 +73,38 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(collections)
       .where(eq(collections.userId, userId))
       .orderBy(desc(collections.createdAt));
+  }
+
+  async getCollectionsWithCounts(userId: string): Promise<CollectionWithCounts[]> {
+    const result = await db.execute(sql`
+      SELECT 
+        c.*,
+        COALESCE(p.post_count, 0)::int as "itemCount",
+        p.first_thumbnail as "firstPostThumbnail"
+      FROM collections c
+      LEFT JOIN LATERAL (
+        SELECT 
+          COUNT(*) as post_count,
+          (SELECT thumbnail_url FROM posts WHERE collection_id = c.id ORDER BY created_at ASC LIMIT 1) as first_thumbnail
+        FROM posts 
+        WHERE collection_id = c.id
+      ) p ON true
+      WHERE c.user_id = ${userId}
+      ORDER BY c.updated_at DESC
+    `);
+    
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      title: row.title,
+      coverImage: row.cover_image ?? null,
+      coverGradient: row.cover_gradient ?? null,
+      summary: row.summary ?? null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      itemCount: row.itemCount ?? 0,
+      firstPostThumbnail: row.firstPostThumbnail ?? null,
+    }));
   }
 
   async getCollection(id: number, userId: string): Promise<Collection | undefined> {
