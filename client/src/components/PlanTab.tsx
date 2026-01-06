@@ -1,29 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPlan, generatePlan, deletePlan, updatePlan, sharePlan } from '@/lib/api';
 import type { PlaceWithEnrichment, PlanContent } from '@shared/schema';
-import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Share2, Link, Copy, ChevronDown, GripVertical } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Share2, Link, Copy, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-  DragOverEvent,
-  useDroppable,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface PlanTabProps {
   collectionId: number;
@@ -38,22 +18,6 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const [editedContent, setEditedContent] = useState<PlanContent | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [activeDragPlace, setActiveDragPlace] = useState<PlaceWithEnrichment | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,
-        tolerance: 5,
-      },
-    })
-  );
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -173,84 +137,6 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       ...newContent.days[dayIndex].blocks[blockIndex],
       placeIds: currentPlaceIds.filter(id => id !== placeId),
     };
-    setEditedContent(newContent);
-  }, [editedContent]);
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const { active } = event;
-    setActiveDragId(active.id as string);
-    const placeId = parseInt((active.id as string).split('-').pop() || '0');
-    const place = places.find(p => (p.venturrPlaceId || p.id) === placeId);
-    setActiveDragPlace(place || null);
-  }, [places]);
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveDragId(null);
-    setActiveDragPlace(null);
-
-    if (!over || !editedContent) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    if (activeId === overId) return;
-
-    const parsePlaceId = (id: string) => {
-      const parts = id.split('-');
-      return {
-        dayIndex: parseInt(parts[1]),
-        blockIndex: parseInt(parts[2]),
-        placeId: parseInt(parts[3]),
-      };
-    };
-
-    const parseBlockId = (id: string) => {
-      const parts = id.split('-');
-      return {
-        dayIndex: parseInt(parts[1]),
-        blockIndex: parseInt(parts[2]),
-      };
-    };
-
-    const from = parsePlaceId(activeId);
-    const newContent = JSON.parse(JSON.stringify(editedContent)) as PlanContent;
-    const fromBlock = newContent.days[from.dayIndex].blocks[from.blockIndex];
-    const fromIndex = fromBlock.placeIds.indexOf(from.placeId);
-    if (fromIndex === -1) return;
-
-    if (overId.startsWith('block-')) {
-      const toBlockInfo = parseBlockId(overId);
-      const toBlock = newContent.days[toBlockInfo.dayIndex].blocks[toBlockInfo.blockIndex];
-      
-      if (from.dayIndex === toBlockInfo.dayIndex && from.blockIndex === toBlockInfo.blockIndex) {
-        return;
-      }
-      
-      if (fromBlock.placeIds.length <= 1) return;
-      
-      fromBlock.placeIds.splice(fromIndex, 1);
-      toBlock.placeIds.push(from.placeId);
-    } else {
-      const to = parsePlaceId(overId);
-      const toBlock = newContent.days[to.dayIndex].blocks[to.blockIndex];
-
-      if (from.dayIndex === to.dayIndex && from.blockIndex === to.blockIndex) {
-        const toIndex = fromBlock.placeIds.indexOf(to.placeId);
-        if (toIndex === -1) return;
-        fromBlock.placeIds = arrayMove(fromBlock.placeIds, fromIndex, toIndex);
-      } else {
-        if (fromBlock.placeIds.length <= 1) return;
-        fromBlock.placeIds.splice(fromIndex, 1);
-        const toIndex = toBlock.placeIds.indexOf(to.placeId);
-        if (toIndex === -1) {
-          toBlock.placeIds.push(from.placeId);
-        } else {
-          toBlock.placeIds.splice(toIndex, 0, from.placeId);
-        }
-      }
-    }
-
     setEditedContent(newContent);
   }, [editedContent]);
 
@@ -435,44 +321,18 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
         </div>
       )}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        {content.days.map((day, dayIndex) => (
-          <DayCard 
-            key={day.dayNumber} 
-            day={day} 
-            dayIndex={dayIndex}
-            placesMap={placesMap}
-            isEditing={isEditing}
-            onUpdateDayTitle={(title) => updateDayTitle(dayIndex, title)}
-            onUpdateBlockField={(blockIndex, field, value) => updateBlockField(dayIndex, blockIndex, field, value)}
-            onRemovePlace={(blockIndex, placeId) => removePlaceFromBlock(dayIndex, blockIndex, placeId)}
-          />
-        ))}
-        <DragOverlay>
-          {activeDragPlace && (
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-white border-2 border-primary shadow-lg">
-              {activeDragPlace.photoUrl ? (
-                <img src={activeDragPlace.photoUrl} alt={activeDragPlace.name} className="w-10 h-10 rounded-md object-cover" />
-              ) : (
-                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-foreground truncate">{activeDragPlace.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {activeDragPlace.city}{activeDragPlace.country ? `, ${activeDragPlace.country}` : ''}
-                </p>
-              </div>
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+      {content.days.map((day, dayIndex) => (
+        <DayCard 
+          key={day.dayNumber} 
+          day={day} 
+          dayIndex={dayIndex}
+          placesMap={placesMap}
+          isEditing={isEditing}
+          onUpdateDayTitle={(title) => updateDayTitle(dayIndex, title)}
+          onUpdateBlockField={(blockIndex, field, value) => updateBlockField(dayIndex, blockIndex, field, value)}
+          onRemovePlace={(blockIndex, placeId) => removePlaceFromBlock(dayIndex, blockIndex, placeId)}
+        />
+      ))}
 
       {content.notes && (
         <div className="p-4 bg-muted/50 rounded-xl text-sm text-muted-foreground italic">
@@ -641,156 +501,89 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
         )}
       </div>
       <div className="p-4 space-y-4">
-        {day.blocks.map((block, blockIndex) => {
-          const blockPlaceIds = block.placeIds.map(placeId => `place-${dayIndex}-${blockIndex}-${placeId}`);
-          return (
-            <div key={block.id} className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">{timeIcons[block.timeOfDay || 'flexible'] || timeIcons.flexible}</span>
-                <span className="font-medium text-foreground/80 capitalize">{block.timeOfDay || 'flexible'}</span>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={block.title || ''}
-                    onChange={(e) => onUpdateBlockField(blockIndex, 'title', e.target.value)}
-                    placeholder="Block title..."
-                    className="flex-1 px-2 py-0.5 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary"
-                    data-testid={`input-block-title-${day.dayNumber}-${blockIndex}`}
-                  />
-                ) : (
-                  block.title && <span className="text-muted-foreground">• {block.title}</span>
-                )}
-              </div>
-              <SortableContext items={blockPlaceIds} strategy={verticalListSortingStrategy}>
-                <DroppableBlock id={`block-${dayIndex}-${blockIndex}`} isEditing={isEditing}>
-                  {block.placeIds.map((placeId) => {
-                    const place = placesMap.get(placeId);
-                    if (!place) return null;
-                    const dragId = `place-${dayIndex}-${blockIndex}-${placeId}`;
-                    return (
-                      <SortablePlaceCard
-                        key={dragId}
-                        id={dragId}
-                        place={place}
-                        placeId={placeId}
-                        isEditing={isEditing}
-                        onRemove={() => onRemovePlace(blockIndex, placeId)}
-                      />
-                    );
-                  })}
-                </DroppableBlock>
-              </SortableContext>
+        {day.blocks.map((block, blockIndex) => (
+          <div key={block.id} className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
               {isEditing ? (
-                <textarea
-                  value={block.notes || ''}
-                  onChange={(e) => onUpdateBlockField(blockIndex, 'notes', e.target.value)}
-                  placeholder="Add notes..."
-                  rows={2}
-                  className="w-full ml-5 px-2 py-1.5 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                  style={{ width: 'calc(100% - 1.25rem)' }}
-                  data-testid={`textarea-notes-${day.dayNumber}-${blockIndex}`}
+                <select
+                  value={block.timeOfDay || 'flexible'}
+                  onChange={(e) => onUpdateBlockField(blockIndex, 'timeOfDay', e.target.value)}
+                  className="px-2 py-1 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                  data-testid={`select-time-${day.dayNumber}-${blockIndex}`}
+                >
+                  {TIME_OF_DAY_OPTIONS.map(time => (
+                    <option key={time} value={time} className="capitalize">{time}</option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <span className="text-muted-foreground">{timeIcons[block.timeOfDay || 'flexible'] || timeIcons.flexible}</span>
+                  <span className="font-medium text-foreground/80 capitalize">{block.timeOfDay || 'flexible'}</span>
+                </>
+              )}
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={block.title || ''}
+                  onChange={(e) => onUpdateBlockField(blockIndex, 'title', e.target.value)}
+                  placeholder="Block title..."
+                  className="flex-1 px-2 py-0.5 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                  data-testid={`input-block-title-${day.dayNumber}-${blockIndex}`}
                 />
               ) : (
-                block.notes && (
-                  <p className="text-xs text-muted-foreground italic pl-5">{block.notes}</p>
-                )
+                block.title && <span className="text-muted-foreground">• {block.title}</span>
               )}
             </div>
-          );
-        })}
+            <div className="space-y-2 pl-5">
+              {block.placeIds.map((placeId) => {
+                const place = placesMap.get(placeId);
+                if (!place) return null;
+                return (
+                  <div key={placeId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 group" data-testid={`plan-place-${placeId}`}>
+                    {place.photoUrl ? (
+                      <img src={place.photoUrl} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-foreground truncate">{place.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {place.city}{place.country ? `, ${place.country}` : ''}
+                      </p>
+                    </div>
+                    {isEditing && (
+                      <button
+                        onClick={() => onRemovePlace(blockIndex, placeId)}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all"
+                        data-testid={`button-remove-place-${placeId}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {isEditing ? (
+              <textarea
+                value={block.notes || ''}
+                onChange={(e) => onUpdateBlockField(blockIndex, 'notes', e.target.value)}
+                placeholder="Add notes..."
+                rows={2}
+                className="w-full ml-5 px-2 py-1.5 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                style={{ width: 'calc(100% - 1.25rem)' }}
+                data-testid={`textarea-notes-${day.dayNumber}-${blockIndex}`}
+              />
+            ) : (
+              block.notes && (
+                <p className="text-xs text-muted-foreground italic pl-5">{block.notes}</p>
+              )
+            )}
+          </div>
+        ))}
       </div>
-    </div>
-  );
-}
-
-interface DroppableBlockProps {
-  id: string;
-  children: React.ReactNode;
-  isEditing: boolean;
-}
-
-function DroppableBlock({ id, children, isEditing }: DroppableBlockProps) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  
-  return (
-    <div 
-      ref={setNodeRef} 
-      className={cn(
-        "space-y-2 pl-5 min-h-[40px] rounded-lg transition-colors",
-        isEditing && isOver && "bg-primary/10 ring-2 ring-primary/30"
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-interface SortablePlaceCardProps {
-  id: string;
-  place: PlaceWithEnrichment;
-  placeId: number;
-  isEditing: boolean;
-  onRemove: () => void;
-}
-
-function SortablePlaceCard({ id, place, placeId, isEditing, onRemove }: SortablePlaceCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-3 p-2 rounded-lg bg-muted/50 group",
-        isDragging && "opacity-50"
-      )}
-      data-testid={`plan-place-${placeId}`}
-    >
-      {isEditing && (
-        <button
-          {...attributes}
-          {...listeners}
-          className="touch-none p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
-          data-testid={`drag-handle-${placeId}`}
-        >
-          <GripVertical className="w-4 h-4" />
-        </button>
-      )}
-      {place.photoUrl ? (
-        <img src={place.photoUrl} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
-      ) : (
-        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm text-foreground truncate">{place.name}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {place.city}{place.country ? `, ${place.country}` : ''}
-        </p>
-      </div>
-      {isEditing && (
-        <button
-          onClick={onRemove}
-          className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all"
-          data-testid={`button-remove-place-${placeId}`}
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
     </div>
   );
 }

@@ -7,11 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renameCollection, deleteCollection } from '@/lib/api';
 
 interface VenturrCardProps {
-  venturr: Omit<Collection, 'coverImage'> & { 
-    itemCount?: number; 
-    firstPostThumbnail?: string | null;
-    coverImageThumbnail?: string | null;
-  };
+  venturr: Collection & { itemCount?: number; firstPostThumbnail?: string | null };
 }
 
 function parseGradient(gradient: string | null | undefined): { from: string; to: string } {
@@ -28,8 +24,8 @@ export function VenturrCard({ venturr }: VenturrCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const queryClient = useQueryClient();
   
-  // Cover: use collection's cover image thumbnail, then first post's thumbnail, otherwise show gradient
-  const displayImage = venturr.coverImageThumbnail || venturr.firstPostThumbnail || null;
+  // Cover: use first post's thumbnail, otherwise show gradient
+  const displayImage = venturr.firstPostThumbnail || null;
 
   const renameMutation = useMutation({
     mutationFn: async () => {

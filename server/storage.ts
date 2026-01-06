@@ -10,19 +10,13 @@ import {
 } from "@shared/schema";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 
-export type CollectionWithCounts = Omit<Collection, 'coverImage'> & { 
-  itemCount: number; 
-  firstPostThumbnail: string | null;
-  coverImageThumbnail: string | null;
-};
-
 export interface IStorage {
   // Collections
   getCollections(userId: string): Promise<Collection[]>;
-  getCollectionsWithCounts(userId: string): Promise<CollectionWithCounts[]>;
   getCollection(id: number, userId: string): Promise<Collection | undefined>;
   createCollection(collection: InsertCollection): Promise<Collection>;
-  updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverImageThumbnail?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
+  updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
+  updateCollectionThumbnail(id: number, userId: string, coverImage: string | null, coverGradient: string | null): Promise<void>;
   touchCollection(id: number): Promise<void>;
   deleteCollection(id: number, userId: string): Promise<void>;
   
@@ -75,45 +69,6 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(collections.createdAt));
   }
 
-  async getCollectionsWithCounts(userId: string): Promise<CollectionWithCounts[]> {
-    const result = await db.execute(sql`
-      SELECT 
-        c.id,
-        c.user_id,
-        c.title,
-        c.cover_image_thumbnail,
-        c.cover_gradient,
-        c.summary,
-        c.created_at,
-        c.updated_at,
-        COALESCE(p.post_count, 0)::int as "itemCount",
-        p.first_thumbnail as "firstPostThumbnail"
-      FROM collections c
-      LEFT JOIN LATERAL (
-        SELECT 
-          COUNT(*) as post_count,
-          (SELECT thumbnail_url FROM posts WHERE collection_id = c.id ORDER BY created_at ASC LIMIT 1) as first_thumbnail
-        FROM posts 
-        WHERE collection_id = c.id
-      ) p ON true
-      WHERE c.user_id = ${userId}
-      ORDER BY c.updated_at DESC
-    `);
-    
-    return result.rows.map((row: any) => ({
-      id: row.id,
-      userId: row.user_id,
-      title: row.title,
-      coverImageThumbnail: row.cover_image_thumbnail ?? null,
-      coverGradient: row.cover_gradient ?? null,
-      summary: row.summary ?? null,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      itemCount: row.itemCount ?? 0,
-      firstPostThumbnail: row.firstPostThumbnail ?? null,
-    }));
-  }
-
   async getCollection(id: number, userId: string): Promise<Collection | undefined> {
     const result = await db.select().from(collections)
       .where(and(eq(collections.id, id), eq(collections.userId, userId)));
@@ -128,13 +83,24 @@ export class DatabaseStorage implements IStorage {
   async updateCollection(
     id: number,
     userId: string,
-    updates: { title?: string; coverImage?: string | null; coverImageThumbnail?: string | null; coverGradient?: string | null; summary?: string | null }
+    updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }
   ): Promise<Collection | undefined> {
     const result = await db.update(collections)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(collections.id, id), eq(collections.userId, userId)))
       .returning();
     return result[0];
+  }
+
+  async updateCollectionThumbnail(
+    id: number,
+    userId: string,
+    coverImage: string | null,
+    coverGradient: string | null
+  ): Promise<void> {
+    await db.update(collections)
+      .set({ coverImage, coverGradient, updatedAt: new Date() })
+      .where(and(eq(collections.id, id), eq(collections.userId, userId)));
   }
 
   async touchCollection(id: number): Promise<void> {

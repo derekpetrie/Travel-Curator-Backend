@@ -48,7 +48,7 @@ export async function registerRoutes(
   app.get("/api/collections", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const collections = await storage.getCollectionsWithCounts(userId);
+      const collections = await storage.getCollections(userId);
       res.json(collections);
     } catch (error) {
       console.error("Error fetching collections:", error);
@@ -77,30 +77,15 @@ export async function registerRoutes(
       const parsed = insertCollectionSchema.parse({ ...req.body, userId });
       const collection = await storage.createCollection(parsed);
       
-      // Generate thumbnail in background for any cover image
-      if (parsed.coverImage) {
-        // User provided a cover image - generate thumbnail for it
-        import('./thumbnail').then(async ({ generateThumbnailCanvas }) => {
-          try {
-            const coverImageThumbnail = await generateThumbnailCanvas(parsed.coverImage!, 200);
-            if (coverImageThumbnail) {
-              await storage.updateCollection(collection.id, userId, { coverImageThumbnail });
-            }
-          } catch (err) {
-            console.error("Error generating collection cover thumbnail:", err);
-          }
-        });
-      } else if (!parsed.coverGradient) {
-        // No cover at all - generate placeholder gradient
+      // Only generate thumbnail if user didn't provide a cover
+      if (!parsed.coverImage && !parsed.coverGradient) {
         generateCollectionThumbnail(parsed.title).then(async (thumbnail) => {
           try {
-            await storage.updateCollection(
+            await storage.updateCollectionThumbnail(
               collection.id,
               userId,
-              {
-                coverImage: thumbnail.coverImage,
-                coverGradient: thumbnail.coverGradient
-              }
+              thumbnail.coverImage,
+              thumbnail.coverGradient
             );
           } catch (err) {
             console.error("Error updating collection thumbnail:", err);
@@ -163,24 +148,8 @@ export async function registerRoutes(
         );
       }
 
-      // Generate thumbnail for the cover image (handles both base64 and URLs)
-      let coverImageThumbnail: string | null = null;
-      if (normalizedCoverImage) {
-        const { generateThumbnailCanvas } = await import('./thumbnail');
-        try {
-          coverImageThumbnail = await generateThumbnailCanvas(normalizedCoverImage, 200);
-        } catch (err) {
-          console.error("Error generating thumbnail:", err);
-          coverImageThumbnail = null;
-        }
-      }
-
       // Update the cover
-      await storage.updateCollection(id, userId, { 
-        coverImage: normalizedCoverImage, 
-        coverImageThumbnail,
-        coverGradient 
-      });
+      await storage.updateCollectionThumbnail(id, userId, normalizedCoverImage, coverGradient);
 
       const updatedCollection = await storage.getCollection(id, userId);
       res.json(updatedCollection);
