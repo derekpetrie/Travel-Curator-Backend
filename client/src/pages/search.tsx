@@ -107,7 +107,7 @@ export default function Explore() {
   };
 
   const handleAddToVenturr = (place?: PlaceWithEnrichment) => {
-    if (place && place.venturrPlaceId) {
+    if (place && place.venturrPlaceId != null) {
       setSelectedPlaceIds(new Set([place.venturrPlaceId]));
     }
     setDrawerOpen(false);
@@ -116,8 +116,15 @@ export default function Explore() {
 
   const handleSelectCollection = async (collection: Collection) => {
     const placeIds = Array.from(selectedPlaceIds);
+    if (placeIds.length === 0) {
+      toast.error('No places selected');
+      return;
+    }
     try {
       await copyMutation.mutateAsync({ collectionId: collection.id, placeIds });
+      toast.success(`Added to ${collection.title}`);
+    } catch {
+      toast.error('Failed to add places');
     } finally {
       setAddToVenturrOpen(false);
       setSelectedPlaceIds(new Set());

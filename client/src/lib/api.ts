@@ -1,4 +1,4 @@
-import type { Collection, Post, Place, Plan, PlanContent } from '@shared/schema';
+import type { Collection, Post, Place, PlaceWithEnrichment, Plan, PlanContent } from '@shared/schema';
 
 const API_BASE = '/api';
 
@@ -91,7 +91,7 @@ export async function fetchPlaces(collectionId: number): Promise<Place[]> {
   return response.json();
 }
 
-export async function fetchAllPlaces(): Promise<Place[]> {
+export async function fetchAllPlaces(): Promise<PlaceWithEnrichment[]> {
   const response = await fetch(`${API_BASE}/places`);
   if (!response.ok) throw new Error('Failed to fetch places');
   return response.json();
