@@ -150,9 +150,9 @@ export async function registerRoutes(
         );
       }
 
-      // Generate thumbnail if cover image is a base64 data URL
+      // Generate thumbnail for the cover image (handles both base64 and URLs)
       let coverImageThumbnail: string | null = null;
-      if (normalizedCoverImage && normalizedCoverImage.startsWith('data:image')) {
+      if (normalizedCoverImage) {
         const { generateThumbnailCanvas } = await import('./thumbnail');
         try {
           coverImageThumbnail = await generateThumbnailCanvas(normalizedCoverImage, 200);
