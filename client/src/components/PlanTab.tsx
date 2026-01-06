@@ -414,22 +414,44 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
         </div>
       )}
 
-      {content.days.map((day, dayIndex) => (
-        <DayCard 
-          key={day.dayNumber} 
-          day={day} 
-          dayIndex={dayIndex}
-          placesMap={placesMap}
-          isEditing={isEditing}
-          sensors={sensors}
-          activeDragPlace={activeDragPlace}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onUpdateDayTitle={(title) => updateDayTitle(dayIndex, title)}
-          onUpdateBlockField={(blockIndex, field, value) => updateBlockField(dayIndex, blockIndex, field, value)}
-          onRemovePlace={(blockIndex, placeId) => removePlaceFromBlock(dayIndex, blockIndex, placeId)}
-        />
-      ))}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        {content.days.map((day, dayIndex) => (
+          <DayCard 
+            key={day.dayNumber} 
+            day={day} 
+            dayIndex={dayIndex}
+            placesMap={placesMap}
+            isEditing={isEditing}
+            onUpdateDayTitle={(title) => updateDayTitle(dayIndex, title)}
+            onUpdateBlockField={(blockIndex, field, value) => updateBlockField(dayIndex, blockIndex, field, value)}
+            onRemovePlace={(blockIndex, placeId) => removePlaceFromBlock(dayIndex, blockIndex, placeId)}
+          />
+        ))}
+        <DragOverlay>
+          {activeDragPlace && (
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-white border-2 border-primary shadow-lg">
+              {activeDragPlace.photoUrl ? (
+                <img src={activeDragPlace.photoUrl} alt={activeDragPlace.name} className="w-10 h-10 rounded-md object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-foreground truncate">{activeDragPlace.name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {activeDragPlace.city}{activeDragPlace.country ? `, ${activeDragPlace.country}` : ''}
+                </p>
+              </div>
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {content.notes && (
         <div className="p-4 bg-muted/50 rounded-xl text-sm text-muted-foreground italic">
@@ -564,10 +586,6 @@ interface DayCardProps {
   dayIndex: number;
   placesMap: Map<number, PlaceWithEnrichment>;
   isEditing: boolean;
-  sensors: ReturnType<typeof useSensors>;
-  activeDragPlace: PlaceWithEnrichment | null;
-  onDragStart: (event: DragStartEvent) => void;
-  onDragEnd: (event: DragEndEvent) => void;
   onUpdateDayTitle: (title: string) => void;
   onUpdateBlockField: (blockIndex: number, field: string, value: string) => void;
   onRemovePlace: (blockIndex: number, placeId: number) => void;
@@ -575,7 +593,7 @@ interface DayCardProps {
 
 const TIME_OF_DAY_OPTIONS = ['morning', 'afternoon', 'evening', 'flexible'] as const;
 
-function DayCard({ day, dayIndex, placesMap, isEditing, sensors, activeDragPlace, onDragStart, onDragEnd, onUpdateDayTitle, onUpdateBlockField, onRemovePlace }: DayCardProps) {
+function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpdateBlockField, onRemovePlace }: DayCardProps) {
   const timeIcons: Record<string, React.ReactNode> = {
     morning: <Sunrise className="w-3.5 h-3.5" />,
     afternoon: <Sun className="w-3.5 h-3.5" />,
@@ -605,106 +623,65 @@ function DayCard({ day, dayIndex, placesMap, isEditing, sensors, activeDragPlace
           day.title && <span className="text-muted-foreground">— {day.title}</span>
         )}
       </div>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      >
-        <div className="p-4 space-y-4">
-          {day.blocks.map((block, blockIndex) => {
-            const blockPlaceIds = block.placeIds.map(placeId => `place-${dayIndex}-${blockIndex}-${placeId}`);
-            return (
-              <div key={block.id} className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  {isEditing ? (
-                    <select
-                      value={block.timeOfDay || 'flexible'}
-                      onChange={(e) => onUpdateBlockField(blockIndex, 'timeOfDay', e.target.value)}
-                      className="px-2 py-1 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary"
-                      data-testid={`select-time-${day.dayNumber}-${blockIndex}`}
-                    >
-                      {TIME_OF_DAY_OPTIONS.map(time => (
-                        <option key={time} value={time} className="capitalize">{time}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <>
-                      <span className="text-muted-foreground">{timeIcons[block.timeOfDay || 'flexible'] || timeIcons.flexible}</span>
-                      <span className="font-medium text-foreground/80 capitalize">{block.timeOfDay || 'flexible'}</span>
-                    </>
-                  )}
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={block.title || ''}
-                      onChange={(e) => onUpdateBlockField(blockIndex, 'title', e.target.value)}
-                      placeholder="Block title..."
-                      className="flex-1 px-2 py-0.5 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary"
-                      data-testid={`input-block-title-${day.dayNumber}-${blockIndex}`}
-                    />
-                  ) : (
-                    block.title && <span className="text-muted-foreground">• {block.title}</span>
-                  )}
-                </div>
-                <SortableContext items={blockPlaceIds} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2 pl-5">
-                    {block.placeIds.map((placeId) => {
-                      const place = placesMap.get(placeId);
-                      if (!place) return null;
-                      const dragId = `place-${dayIndex}-${blockIndex}-${placeId}`;
-                      return (
-                        <SortablePlaceCard
-                          key={dragId}
-                          id={dragId}
-                          place={place}
-                          placeId={placeId}
-                          isEditing={isEditing}
-                          onRemove={() => onRemovePlace(blockIndex, placeId)}
-                        />
-                      );
-                    })}
-                  </div>
-                </SortableContext>
+      <div className="p-4 space-y-4">
+        {day.blocks.map((block, blockIndex) => {
+          const blockPlaceIds = block.placeIds.map(placeId => `place-${dayIndex}-${blockIndex}-${placeId}`);
+          return (
+            <div key={block.id} className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">{timeIcons[block.timeOfDay || 'flexible'] || timeIcons.flexible}</span>
+                <span className="font-medium text-foreground/80 capitalize">{block.timeOfDay || 'flexible'}</span>
                 {isEditing ? (
-                  <textarea
-                    value={block.notes || ''}
-                    onChange={(e) => onUpdateBlockField(blockIndex, 'notes', e.target.value)}
-                    placeholder="Add notes..."
-                    rows={2}
-                    className="w-full ml-5 px-2 py-1.5 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                    style={{ width: 'calc(100% - 1.25rem)' }}
-                    data-testid={`textarea-notes-${day.dayNumber}-${blockIndex}`}
+                  <input
+                    type="text"
+                    value={block.title || ''}
+                    onChange={(e) => onUpdateBlockField(blockIndex, 'title', e.target.value)}
+                    placeholder="Block title..."
+                    className="flex-1 px-2 py-0.5 text-sm border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                    data-testid={`input-block-title-${day.dayNumber}-${blockIndex}`}
                   />
                 ) : (
-                  block.notes && (
-                    <p className="text-xs text-muted-foreground italic pl-5">{block.notes}</p>
-                  )
+                  block.title && <span className="text-muted-foreground">• {block.title}</span>
                 )}
               </div>
-            );
-          })}
-        </div>
-        <DragOverlay>
-          {activeDragPlace && (
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-white border-2 border-primary shadow-lg">
-              {activeDragPlace.photoUrl ? (
-                <img src={activeDragPlace.photoUrl} alt={activeDragPlace.name} className="w-10 h-10 rounded-md object-cover" />
-              ) : (
-                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+              <SortableContext items={blockPlaceIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2 pl-5">
+                  {block.placeIds.map((placeId) => {
+                    const place = placesMap.get(placeId);
+                    if (!place) return null;
+                    const dragId = `place-${dayIndex}-${blockIndex}-${placeId}`;
+                    return (
+                      <SortablePlaceCard
+                        key={dragId}
+                        id={dragId}
+                        place={place}
+                        placeId={placeId}
+                        isEditing={isEditing}
+                        onRemove={() => onRemovePlace(blockIndex, placeId)}
+                      />
+                    );
+                  })}
                 </div>
+              </SortableContext>
+              {isEditing ? (
+                <textarea
+                  value={block.notes || ''}
+                  onChange={(e) => onUpdateBlockField(blockIndex, 'notes', e.target.value)}
+                  placeholder="Add notes..."
+                  rows={2}
+                  className="w-full ml-5 px-2 py-1.5 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  style={{ width: 'calc(100% - 1.25rem)' }}
+                  data-testid={`textarea-notes-${day.dayNumber}-${blockIndex}`}
+                />
+              ) : (
+                block.notes && (
+                  <p className="text-xs text-muted-foreground italic pl-5">{block.notes}</p>
+                )
               )}
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-foreground truncate">{activeDragPlace.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {activeDragPlace.city}{activeDragPlace.country ? `, ${activeDragPlace.country}` : ''}
-                </p>
-              </div>
             </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+          );
+        })}
+      </div>
     </div>
   );
 }
