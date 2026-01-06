@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { PlaceWithEnrichment } from '@shared/schema';
 import { fetchCollectionsForPlace } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 
 interface PlaceDrawerProps {
   place: PlaceWithEnrichment | null;
@@ -196,14 +197,14 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVen
             )}
 
             {onAddToVenturr && (
-              <button
+              <Button
                 onClick={() => onAddToVenturr(place)}
-                className="mt-3 w-full py-2.5 rounded-lg bg-coral-500 text-white font-medium flex items-center justify-center gap-2 hover:bg-coral-600 transition-colors"
+                className="mt-4 w-full py-3 rounded-[14px] bg-coral-500 text-white font-semibold shadow-sm hover:bg-coral-600 transition-colors"
                 data-testid="button-add-to-venturr"
               >
                 <FolderPlus className="w-4 h-4" />
                 Add to Venturr
-              </button>
+              </Button>
             )}
           </div>
         </Drawer.Content>

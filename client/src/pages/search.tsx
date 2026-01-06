@@ -8,6 +8,8 @@ import { PlaceDrawer } from '@/components/PlaceDrawer';
 import type { PlaceWithEnrichment, Collection } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 const CATEGORY_FILTERS = [
@@ -52,10 +54,6 @@ export default function Explore() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['all-places'] });
       queryClient.invalidateQueries({ queryKey: ['collections'] });
-      setSelectedPlaceIds(new Set());
-      setAddToVenturrOpen(false);
-      setNewVenturrName('');
-      setIsCreatingNew(false);
       if (result.copiedCount > 0) {
         toast.success(`Added ${result.copiedCount} place${result.copiedCount > 1 ? 's' : ''} to Venturr`);
       } else {
@@ -119,7 +117,12 @@ export default function Explore() {
 
   const handleSelectCollection = async (collection: Collection) => {
     const placeIds = Array.from(selectedPlaceIds);
-    copyMutation.mutate({ collectionId: collection.id, placeIds });
+    try {
+      await copyMutation.mutateAsync({ collectionId: collection.id, placeIds });
+    } finally {
+      setAddToVenturrOpen(false);
+      setSelectedPlaceIds(new Set());
+    }
   };
 
   const handleCreateAndAdd = async () => {
@@ -128,9 +131,14 @@ export default function Explore() {
     try {
       const newCollection = await createMutation.mutateAsync(newVenturrName.trim());
       const placeIds = Array.from(selectedPlaceIds);
-      copyMutation.mutate({ collectionId: newCollection.id, placeIds });
+      await copyMutation.mutateAsync({ collectionId: newCollection.id, placeIds });
     } catch {
       toast.error('Failed to create Venturr');
+    } finally {
+      setAddToVenturrOpen(false);
+      setSelectedPlaceIds(new Set());
+      setNewVenturrName('');
+      setIsCreatingNew(false);
     }
   };
 
@@ -324,11 +332,19 @@ export default function Explore() {
         onAddToVenturr={handleAddToVenturr}
       />
 
-      <Dialog open={addToVenturrOpen} onOpenChange={setAddToVenturrOpen}>
-        <DialogContent className="max-w-md">
+      <Dialog open={addToVenturrOpen} onOpenChange={(open) => {
+        setAddToVenturrOpen(open);
+        if (!open) {
+          setNewVenturrName('');
+          setIsCreatingNew(false);
+        }
+      }}>
+        <DialogContent className="max-w-md rounded-[14px] shadow-sm">
           <DialogHeader>
-            <DialogTitle>Add to Venturr</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="font-heading text-lg font-semibold text-gunmetal-900">
+              Add to Venturr
+            </DialogTitle>
+            <DialogDescription className="text-gunmetal-500">
               {selectedPlaceIds.size === 1 
                 ? 'Choose a Venturr to add this place to'
                 : `Choose a Venturr to add ${selectedPlaceIds.size} places to`}
@@ -338,46 +354,48 @@ export default function Explore() {
           <div className="space-y-3 mt-4">
             {isCreatingNew ? (
               <div className="space-y-3">
-                <input
+                <Input
                   type="text"
                   value={newVenturrName}
                   onChange={(e) => setNewVenturrName(e.target.value)}
                   placeholder="New Venturr name..."
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-coral-500"
+                  className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-coral-500 focus:border-coral-500"
                   autoFocus
                   data-testid="input-new-venturr-name"
                 />
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setIsCreatingNew(false);
                       setNewVenturrName('');
                     }}
-                    className="flex-1 py-2.5 rounded-lg border border-border font-medium hover:bg-muted transition-colors"
+                    className="flex-1 h-11 rounded-[14px]"
                     data-testid="button-cancel-create"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleCreateAndAdd}
                     disabled={!newVenturrName.trim() || copyMutation.isPending}
-                    className="flex-1 py-2.5 rounded-lg bg-coral-500 text-white font-medium hover:bg-coral-600 transition-colors disabled:opacity-50"
+                    className="flex-1 h-11 rounded-[14px] bg-coral-500 text-white hover:bg-coral-600"
                     data-testid="button-create-and-add"
                   >
                     {copyMutation.isPending ? 'Creating...' : 'Create & Add'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
               <>
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setIsCreatingNew(true)}
-                  className="w-full py-3 rounded-lg border-2 border-dashed border-coral-300 text-coral-500 font-medium flex items-center justify-center gap-2 hover:bg-coral-50 transition-colors"
+                  className="w-full h-12 rounded-[14px] border-2 border-dashed border-coral-300 text-coral-500 font-medium hover:bg-coral-50"
                   data-testid="button-create-new-venturr"
                 >
                   <Plus className="w-5 h-5" />
                   Create new Venturr
-                </button>
+                </Button>
 
                 <div className="max-h-64 overflow-y-auto space-y-2">
                   {collections.map((collection) => (
@@ -385,11 +403,11 @@ export default function Explore() {
                       key={collection.id}
                       onClick={() => handleSelectCollection(collection)}
                       disabled={copyMutation.isPending}
-                      className="w-full py-3 px-4 rounded-lg border border-border text-left font-medium hover:bg-muted/50 transition-colors flex items-center justify-between disabled:opacity-50"
+                      className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-coral-300 hover:bg-coral-50/50 transition-colors flex items-center justify-between disabled:opacity-50"
                       data-testid={`button-select-venturr-${collection.id}`}
                     >
-                      <span className="truncate">{collection.title}</span>
-                      <FolderPlus className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate text-gunmetal-900">{collection.title}</span>
+                      <FolderPlus className="w-4 h-4 text-gunmetal-500 flex-shrink-0" />
                     </button>
                   ))}
                 </div>
