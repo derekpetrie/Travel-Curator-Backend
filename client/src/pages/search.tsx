@@ -1,6 +1,6 @@
 import { TabBar } from '@/components/TabBar';
 import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Check, X, Plus, FolderPlus } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
@@ -29,6 +29,8 @@ export default function Explore() {
   const [addToVenturrOpen, setAddToVenturrOpen] = useState(false);
   const [newVenturrName, setNewVenturrName] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const pendingPlaceIdRef = useRef<number | null>(null);
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -108,10 +110,28 @@ export default function Explore() {
 
   const handleAddToVenturr = (place?: PlaceWithEnrichment) => {
     if (place && place.venturrPlaceId != null) {
+      pendingPlaceIdRef.current = place.venturrPlaceId;
       setSelectedPlaceIds(new Set([place.venturrPlaceId]));
     }
     setDrawerOpen(false);
-    setAddToVenturrOpen(true);
+    setTimeout(() => {
+      setAddToVenturrOpen(true);
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (addToVenturrOpen && pendingPlaceIdRef.current !== null) {
+      setSelectedPlaceIds(new Set([pendingPlaceIdRef.current]));
+      pendingPlaceIdRef.current = null;
+    }
+  }, [addToVenturrOpen]);
+
+  const closeModal = () => {
+    setAddToVenturrOpen(false);
+    setSelectedPlaceIds(new Set());
+    setNewVenturrName('');
+    setIsCreatingNew(false);
+    setIsAdding(false);
   };
 
   const handleSelectCollection = async (collection: Collection) => {
@@ -120,31 +140,30 @@ export default function Explore() {
       toast.error('No places selected');
       return;
     }
+    setIsAdding(true);
     try {
       await copyMutation.mutateAsync({ collectionId: collection.id, placeIds });
       toast.success(`Added to ${collection.title}`);
+      closeModal();
     } catch {
       toast.error('Failed to add places');
-    } finally {
-      setAddToVenturrOpen(false);
-      setSelectedPlaceIds(new Set());
+      setIsAdding(false);
     }
   };
 
   const handleCreateAndAdd = async () => {
     if (!newVenturrName.trim()) return;
     
+    setIsAdding(true);
     try {
       const newCollection = await createMutation.mutateAsync(newVenturrName.trim());
       const placeIds = Array.from(selectedPlaceIds);
       await copyMutation.mutateAsync({ collectionId: newCollection.id, placeIds });
+      toast.success(`Added to ${newCollection.title}`);
+      closeModal();
     } catch {
       toast.error('Failed to create Venturr');
-    } finally {
-      setAddToVenturrOpen(false);
-      setSelectedPlaceIds(new Set());
-      setNewVenturrName('');
-      setIsCreatingNew(false);
+      setIsAdding(false);
     }
   };
 
@@ -339,10 +358,8 @@ export default function Explore() {
       />
 
       <Dialog open={addToVenturrOpen} onOpenChange={(open) => {
-        setAddToVenturrOpen(open);
-        if (!open) {
-          setNewVenturrName('');
-          setIsCreatingNew(false);
+        if (!open && !isAdding) {
+          closeModal();
         }
       }}>
         <DialogContent className="max-w-md rounded-[14px] shadow-sm">
@@ -357,67 +374,73 @@ export default function Explore() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 mt-4">
-            {isCreatingNew ? (
-              <div className="space-y-3">
-                <Input
-                  type="text"
-                  value={newVenturrName}
-                  onChange={(e) => setNewVenturrName(e.target.value)}
-                  placeholder="New Venturr name..."
-                  className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-[#F25F5C] focus:border-[#F25F5C]"
-                  autoFocus
-                  data-testid="input-new-venturr-name"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setIsCreatingNew(false);
-                      setNewVenturrName('');
-                    }}
-                    className="flex-1 h-11 rounded-[14px] border border-neutral-200 bg-white font-medium hover:bg-neutral-50 transition-colors"
-                    data-testid="button-cancel-create"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateAndAdd}
-                    disabled={!newVenturrName.trim() || copyMutation.isPending}
-                    className="flex-1 h-11 rounded-[14px] bg-[#F25F5C] text-white font-medium hover:bg-[#e04e4b] transition-colors disabled:opacity-50"
-                    data-testid="button-create-and-add"
-                  >
-                    {copyMutation.isPending ? 'Creating...' : 'Create & Add'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => setIsCreatingNew(true)}
-                  className="w-full h-12 rounded-[14px] border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2"
-                  data-testid="button-create-new-venturr"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create new Venturr
-                </button>
-
-                <div className="max-h-64 overflow-y-auto space-y-2">
-                  {collections.map((collection) => (
+          {isAdding ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-[#F25F5C]" />
+              <p className="text-sm text-gunmetal-500">Adding place...</p>
+            </div>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {isCreatingNew ? (
+                <div className="space-y-3">
+                  <Input
+                    type="text"
+                    value={newVenturrName}
+                    onChange={(e) => setNewVenturrName(e.target.value)}
+                    placeholder="New Venturr name..."
+                    className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-[#F25F5C] focus:border-[#F25F5C]"
+                    autoFocus
+                    data-testid="input-new-venturr-name"
+                  />
+                  <div className="flex gap-2">
                     <button
-                      key={collection.id}
-                      onClick={() => handleSelectCollection(collection)}
-                      disabled={copyMutation.isPending}
-                      className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between disabled:opacity-50"
-                      data-testid={`button-select-venturr-${collection.id}`}
+                      onClick={() => {
+                        setIsCreatingNew(false);
+                        setNewVenturrName('');
+                      }}
+                      className="flex-1 h-11 rounded-[14px] border border-neutral-200 bg-white font-medium hover:bg-neutral-50 transition-colors"
+                      data-testid="button-cancel-create"
                     >
-                      <span className="truncate text-gunmetal-900">{collection.title}</span>
-                      <FolderPlus className="w-4 h-4 text-gunmetal-500 flex-shrink-0" />
+                      Cancel
                     </button>
-                  ))}
+                    <button
+                      onClick={handleCreateAndAdd}
+                      disabled={!newVenturrName.trim()}
+                      className="flex-1 h-11 rounded-[14px] bg-[#F25F5C] text-white font-medium hover:bg-[#e04e4b] transition-colors disabled:opacity-50"
+                      data-testid="button-create-and-add"
+                    >
+                      Create & Add
+                    </button>
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsCreatingNew(true)}
+                    className="w-full h-12 rounded-[14px] border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2"
+                    data-testid="button-create-new-venturr"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create new Venturr
+                  </button>
+
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {collections.map((collection) => (
+                      <button
+                        key={collection.id}
+                        onClick={() => handleSelectCollection(collection)}
+                        className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between"
+                        data-testid={`button-select-venturr-${collection.id}`}
+                      >
+                        <span className="truncate text-gunmetal-900">{collection.title}</span>
+                        <FolderPlus className="w-4 h-4 text-gunmetal-500 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
