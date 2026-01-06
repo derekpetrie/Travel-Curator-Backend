@@ -81,11 +81,13 @@ export async function registerRoutes(
       if (!parsed.coverImage && !parsed.coverGradient) {
         generateCollectionThumbnail(parsed.title).then(async (thumbnail) => {
           try {
-            await storage.updateCollectionThumbnail(
+            await storage.updateCollection(
               collection.id,
               userId,
-              thumbnail.coverImage,
-              thumbnail.coverGradient
+              {
+                coverImage: thumbnail.coverImage,
+                coverGradient: thumbnail.coverGradient
+              }
             );
           } catch (err) {
             console.error("Error updating collection thumbnail:", err);
@@ -148,8 +150,24 @@ export async function registerRoutes(
         );
       }
 
+      // Generate thumbnail if cover image is a base64 data URL
+      let coverImageThumbnail: string | null = null;
+      if (normalizedCoverImage && normalizedCoverImage.startsWith('data:image')) {
+        const { generateThumbnailCanvas } = await import('./thumbnail');
+        try {
+          coverImageThumbnail = await generateThumbnailCanvas(normalizedCoverImage, 200);
+        } catch (err) {
+          console.error("Error generating thumbnail:", err);
+          coverImageThumbnail = null;
+        }
+      }
+
       // Update the cover
-      await storage.updateCollectionThumbnail(id, userId, normalizedCoverImage, coverGradient);
+      await storage.updateCollection(id, userId, { 
+        coverImage: normalizedCoverImage, 
+        coverImageThumbnail,
+        coverGradient 
+      });
 
       const updatedCollection = await storage.getCollection(id, userId);
       res.json(updatedCollection);

@@ -10,9 +10,10 @@ import {
 } from "@shared/schema";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 
-export type CollectionWithCounts = Collection & { 
+export type CollectionWithCounts = Omit<Collection, 'coverImage'> & { 
   itemCount: number; 
   firstPostThumbnail: string | null;
+  coverImageThumbnail: string | null;
 };
 
 export interface IStorage {
@@ -21,8 +22,7 @@ export interface IStorage {
   getCollectionsWithCounts(userId: string): Promise<CollectionWithCounts[]>;
   getCollection(id: number, userId: string): Promise<Collection | undefined>;
   createCollection(collection: InsertCollection): Promise<Collection>;
-  updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
-  updateCollectionThumbnail(id: number, userId: string, coverImage: string | null, coverGradient: string | null): Promise<void>;
+  updateCollection(id: number, userId: string, updates: { title?: string; coverImage?: string | null; coverImageThumbnail?: string | null; coverGradient?: string | null; summary?: string | null }): Promise<Collection | undefined>;
   touchCollection(id: number): Promise<void>;
   deleteCollection(id: number, userId: string): Promise<void>;
   
@@ -78,7 +78,14 @@ export class DatabaseStorage implements IStorage {
   async getCollectionsWithCounts(userId: string): Promise<CollectionWithCounts[]> {
     const result = await db.execute(sql`
       SELECT 
-        c.*,
+        c.id,
+        c.user_id,
+        c.title,
+        c.cover_image_thumbnail,
+        c.cover_gradient,
+        c.summary,
+        c.created_at,
+        c.updated_at,
         COALESCE(p.post_count, 0)::int as "itemCount",
         p.first_thumbnail as "firstPostThumbnail"
       FROM collections c
@@ -97,7 +104,7 @@ export class DatabaseStorage implements IStorage {
       id: row.id,
       userId: row.user_id,
       title: row.title,
-      coverImage: row.cover_image ?? null,
+      coverImageThumbnail: row.cover_image_thumbnail ?? null,
       coverGradient: row.cover_gradient ?? null,
       summary: row.summary ?? null,
       createdAt: row.created_at,
@@ -121,24 +128,13 @@ export class DatabaseStorage implements IStorage {
   async updateCollection(
     id: number,
     userId: string,
-    updates: { title?: string; coverImage?: string | null; coverGradient?: string | null; summary?: string | null }
+    updates: { title?: string; coverImage?: string | null; coverImageThumbnail?: string | null; coverGradient?: string | null; summary?: string | null }
   ): Promise<Collection | undefined> {
     const result = await db.update(collections)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(collections.id, id), eq(collections.userId, userId)))
       .returning();
     return result[0];
-  }
-
-  async updateCollectionThumbnail(
-    id: number,
-    userId: string,
-    coverImage: string | null,
-    coverGradient: string | null
-  ): Promise<void> {
-    await db.update(collections)
-      .set({ coverImage, coverGradient, updatedAt: new Date() })
-      .where(and(eq(collections.id, id), eq(collections.userId, userId)));
   }
 
   async touchCollection(id: number): Promise<void> {

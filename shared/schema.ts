@@ -10,6 +10,7 @@ export const collections = pgTable("collections", {
   userId: varchar("user_id").notNull(),
   title: text("title").notNull(),
   coverImage: text("cover_image"),
+  coverImageThumbnail: text("cover_image_thumbnail"),
   coverGradient: text("cover_gradient"),
   summary: text("summary"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
