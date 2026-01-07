@@ -112,11 +112,13 @@ export default function Explore() {
     if (place && place.venturrPlaceId != null) {
       pendingPlaceIdRef.current = place.venturrPlaceId;
       setSelectedPlaceIds(new Set([place.venturrPlaceId]));
-    }
-    setDrawerOpen(false);
-    setTimeout(() => {
+      setDrawerOpen(false);
+      setTimeout(() => {
+        setAddToVenturrOpen(true);
+      }, 100);
+    } else if (selectedPlaceIds.size > 0) {
       setAddToVenturrOpen(true);
-    }, 100);
+    }
   };
 
   useEffect(() => {
@@ -127,7 +129,6 @@ export default function Explore() {
       }
     } else {
       pendingPlaceIdRef.current = null;
-      setSelectedPlaceIds(new Set());
       setNewVenturrName('');
       setIsCreatingNew(false);
       setIsAdding(false);
@@ -144,6 +145,7 @@ export default function Explore() {
     try {
       await copyMutation.mutateAsync({ collectionId: collection.id, placeIds });
       toast.success(`Added to ${collection.title}`);
+      setSelectedPlaceIds(new Set());
       setAddToVenturrOpen(false);
     } catch {
       toast.error('Failed to add places');
@@ -160,6 +162,7 @@ export default function Explore() {
       const placeIds = Array.from(selectedPlaceIds);
       await copyMutation.mutateAsync({ collectionId: newCollection.id, placeIds });
       toast.success(`Added to ${newCollection.title}`);
+      setSelectedPlaceIds(new Set());
       setAddToVenturrOpen(false);
     } catch {
       toast.error('Failed to create Venturr');
