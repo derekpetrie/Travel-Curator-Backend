@@ -62,7 +62,7 @@ export interface IStorage {
   getPlanBySlug(slug: string): Promise<Plan | undefined>;
   getPublicPlans(limit?: number): Promise<(Plan & { collectionTitle: string })[]>;
   createPlan(plan: InsertPlan): Promise<Plan>;
-  updatePlan(id: number, updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date; isPublic?: boolean; shareSlug?: string; peopleCount?: string; tripPurpose?: string; includeRecommendations?: boolean }): Promise<Plan | undefined>;
+  updatePlan(id: number, updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date; isPublic?: boolean; shareSlug?: string; peopleCount?: string; tripPurpose?: string; budget?: string; includeRecommendations?: boolean }): Promise<Plan | undefined>;
   deletePlan(id: number): Promise<void>;
 }
 
@@ -446,7 +446,7 @@ export class DatabaseStorage implements IStorage {
 
   async updatePlan(
     id: number,
-    updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date; isPublic?: boolean; shareSlug?: string; peopleCount?: string; tripPurpose?: string; includeRecommendations?: boolean }
+    updates: { status?: string; content?: PlanContent; placesSnapshotHash?: string; durationDays?: number; generatedAt?: Date; isPublic?: boolean; shareSlug?: string; peopleCount?: string; tripPurpose?: string; budget?: string; includeRecommendations?: boolean }
   ): Promise<Plan | undefined> {
     const result = await db.update(plans)
       .set({ ...updates, updatedAt: new Date() })
@@ -474,6 +474,7 @@ export class DatabaseStorage implements IStorage {
       durationDays: plans.durationDays,
       peopleCount: plans.peopleCount,
       tripPurpose: plans.tripPurpose,
+      budget: plans.budget,
       includeRecommendations: plans.includeRecommendations,
       content: plans.content,
       placesSnapshotHash: plans.placesSnapshotHash,

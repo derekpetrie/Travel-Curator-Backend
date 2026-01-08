@@ -133,6 +133,7 @@ export const plans = pgTable("plans", {
   durationDays: integer("duration_days"),
   peopleCount: text("people_count"), // "1" | "2" | "3-4" | "5+"
   tripPurpose: text("trip_purpose"), // "date_night" | "family_trip" | "friends_outing" | "solo" | "business"
+  budget: text("budget"), // "mindful" | "balanced" | "elevated"
   includeRecommendations: boolean("include_recommendations").default(false),
   content: jsonb("content"), // PlanContent JSON structure
   placesSnapshotHash: text("places_snapshot_hash"), // Hash of place IDs to detect changes

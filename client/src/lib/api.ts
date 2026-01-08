@@ -143,6 +143,7 @@ export interface GeneratePlanOptions {
   durationDays?: number;
   peopleCount?: string;
   tripPurpose?: string;
+  budget?: string;
   includeRecommendations?: boolean;
 }
 

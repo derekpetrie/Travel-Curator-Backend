@@ -837,6 +837,7 @@ export async function registerRoutes(
         durationDays = 3, 
         peopleCount = "2", 
         tripPurpose = "friends_outing",
+        budget = "balanced",
         includeRecommendations = false 
       } = req.body;
       
@@ -868,6 +869,7 @@ export async function registerRoutes(
           durationDays,
           peopleCount,
           tripPurpose,
+          budget,
           includeRecommendations
         });
       } else {
@@ -877,6 +879,7 @@ export async function registerRoutes(
           durationDays,
           peopleCount,
           tripPurpose,
+          budget,
           includeRecommendations,
           placesSnapshotHash: placesHash,
         });
@@ -890,7 +893,7 @@ export async function registerRoutes(
       res.json({ plan, message: "Plan generation started" });
       
       // Generate plan asynchronously
-      generatePlanAsync(plan.id, collection.title, places, durationDays, placesHash, peopleCount, tripPurpose, includeRecommendations);
+      generatePlanAsync(plan.id, collection.title, places, durationDays, placesHash, peopleCount, tripPurpose, budget, includeRecommendations);
       
     } catch (error) {
       console.error("Error starting plan generation:", error);
@@ -976,6 +979,12 @@ const PEOPLE_COUNT_CONTEXT: Record<string, string> = {
   "5+": "a larger group of 5+ people",
 };
 
+const BUDGET_LABELS: Record<string, string> = {
+  mindful: "budget-conscious, seeking good value",
+  balanced: "moderate budget, mix of splurges and savings",
+  elevated: "luxury-focused, willing to pay for premium experiences",
+};
+
 // Async plan generation using AI
 async function generatePlanAsync(
   planId: number,
@@ -985,10 +994,11 @@ async function generatePlanAsync(
   placesHash: string,
   peopleCount: string = "2",
   tripPurpose: string = "friends_outing",
+  budget: string = "balanced",
   includeRecommendations: boolean = false
 ) {
   try {
-    console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days (${peopleCount} people, ${tripPurpose}, recommendations: ${includeRecommendations})`);
+    console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days (${peopleCount} people, ${tripPurpose}, ${budget} budget, recommendations: ${includeRecommendations})`);
     
     // Calculate travel time matrix for places with coordinates
     const placesWithCoords = places.filter(p => p.lat && p.lng).map(p => ({
@@ -1025,12 +1035,14 @@ async function generatePlanAsync(
     // Build personalization context
     const purposeLabel = TRIP_PURPOSE_LABELS[tripPurpose] || "a casual trip";
     const peopleLabel = PEOPLE_COUNT_CONTEXT[peopleCount] || "a small group";
+    const budgetLabel = BUDGET_LABELS[budget] || "moderate budget";
     
     const personalizationContext = `
 ## TRIP CONTEXT:
 - This is ${purposeLabel}
 - Party size: ${peopleLabel}
-- Tailor your recommendations to this context (e.g., romantic spots for dates, kid-friendly for families, social venues for friends)
+- Budget: ${budgetLabel}
+- Tailor your recommendations to this context (e.g., romantic spots for dates, kid-friendly for families, social venues for friends, and appropriate price points for the budget level)
 `;
 
     // Get the main city from the user's saved places for context

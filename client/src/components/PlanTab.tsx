@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPlan, generatePlan, deletePlan, updatePlan, getPhotoUrl, type GeneratePlanOptions } from '@/lib/api';
 import type { PlaceWithEnrichment, PlanContent, PlanBlock, RecommendedPlace } from '@shared/schema';
-import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Users, Target, Lightbulb, Star, Navigation, Globe, Phone, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Users, Target, Lightbulb, Star, Navigation, Globe, Phone, ChevronDown, ChevronUp, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
 import { Switch } from '@/components/ui/switch';
@@ -21,12 +21,18 @@ const TRIP_PURPOSE_OPTIONS = [
   { value: 'solo', label: 'Solo' },
   { value: 'business', label: 'Business' },
 ] as const;
+const BUDGET_OPTIONS = [
+  { value: 'mindful', label: 'Mindful' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'elevated', label: 'Elevated' },
+] as const;
 
 export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const queryClient = useQueryClient();
   const [durationDays, setDurationDays] = useState(3);
   const [peopleCount, setPeopleCount] = useState('2');
   const [tripPurpose, setTripPurpose] = useState('friends_outing');
+  const [budget, setBudget] = useState('balanced');
   const [includeRecommendations, setIncludeRecommendations] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState<PlanContent | null>(null);
@@ -56,9 +62,10 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       durationDays,
       peopleCount,
       tripPurpose,
+      budget,
       includeRecommendations,
     });
-  }, [durationDays, peopleCount, tripPurpose, includeRecommendations, generateMutation]);
+  }, [durationDays, peopleCount, tripPurpose, budget, includeRecommendations, generateMutation]);
 
   const deleteMutation = useMutation({
     mutationFn: () => deletePlan(collectionId),
@@ -159,6 +166,8 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
         setPeopleCount={setPeopleCount}
         tripPurpose={tripPurpose}
         setTripPurpose={setTripPurpose}
+        budget={budget}
+        setBudget={setBudget}
         includeRecommendations={includeRecommendations}
         setIncludeRecommendations={setIncludeRecommendations}
         onGenerate={handleGenerate}
@@ -306,6 +315,8 @@ interface EmptyPlanStateProps {
   setPeopleCount: (count: string) => void;
   tripPurpose: string;
   setTripPurpose: (purpose: string) => void;
+  budget: string;
+  setBudget: (budget: string) => void;
   includeRecommendations: boolean;
   setIncludeRecommendations: (include: boolean) => void;
   onGenerate: () => void;
@@ -320,6 +331,8 @@ function EmptyPlanState({
   setPeopleCount,
   tripPurpose,
   setTripPurpose,
+  budget,
+  setBudget,
   includeRecommendations,
   setIncludeRecommendations,
   onGenerate, 
@@ -395,6 +408,30 @@ function EmptyPlanState({
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Wallet className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground block mb-1.5">Budget</label>
+              <div className="flex gap-1.5">
+                {BUDGET_OPTIONS.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => setBudget(option.value)}
+                    className={cn(
+                      "flex-1 py-2 text-sm font-medium rounded-lg border transition-colors",
+                      budget === option.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border hover:bg-muted"
+                    )}
+                    data-testid={`button-budget-${option.value}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
