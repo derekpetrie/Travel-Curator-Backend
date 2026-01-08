@@ -139,11 +139,18 @@ export async function fetchPlan(collectionId: number): Promise<PlanResponse> {
   return response.json();
 }
 
-export async function generatePlan(collectionId: number, durationDays?: number): Promise<{ plan: Plan; message: string }> {
+export interface GeneratePlanOptions {
+  durationDays?: number;
+  peopleCount?: string;
+  tripPurpose?: string;
+  includeRecommendations?: boolean;
+}
+
+export async function generatePlan(collectionId: number, options?: GeneratePlanOptions): Promise<{ plan: Plan; message: string }> {
   const response = await fetch(`${API_BASE}/collections/${collectionId}/plan/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ durationDays }),
+    body: JSON.stringify(options || {}),
   });
   if (!response.ok) {
     const error = await response.json();

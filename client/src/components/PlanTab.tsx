@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchPlan, generatePlan, deletePlan, updatePlan, getPhotoUrl } from '@/lib/api';
-import type { PlaceWithEnrichment, PlanContent } from '@shared/schema';
-import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X } from 'lucide-react';
+import { fetchPlan, generatePlan, deletePlan, updatePlan, getPhotoUrl, type GeneratePlanOptions } from '@/lib/api';
+import type { PlaceWithEnrichment, PlanContent, PlanBlock } from '@shared/schema';
+import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Users, Target, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
+import { Switch } from '@/components/ui/switch';
 
 
 interface PlanTabProps {
@@ -12,9 +13,21 @@ interface PlanTabProps {
   placesLoading: boolean;
 }
 
+const PEOPLE_COUNT_OPTIONS = ['1', '2', '3-4', '5+'] as const;
+const TRIP_PURPOSE_OPTIONS = [
+  { value: 'date_night', label: 'Date Night' },
+  { value: 'family_trip', label: 'Family Trip' },
+  { value: 'friends_outing', label: 'Friends' },
+  { value: 'solo', label: 'Solo' },
+  { value: 'business', label: 'Business' },
+] as const;
+
 export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const queryClient = useQueryClient();
   const [durationDays, setDurationDays] = useState(3);
+  const [peopleCount, setPeopleCount] = useState('2');
+  const [tripPurpose, setTripPurpose] = useState('friends_outing');
+  const [includeRecommendations, setIncludeRecommendations] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState<PlanContent | null>(null);
 
@@ -32,11 +45,20 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generatePlan(collectionId, durationDays),
+    mutationFn: (options: GeneratePlanOptions) => generatePlan(collectionId, options),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan', collectionId] });
     },
   });
+
+  const handleGenerate = useCallback(() => {
+    generateMutation.mutate({
+      durationDays,
+      peopleCount,
+      tripPurpose,
+      includeRecommendations,
+    });
+  }, [durationDays, peopleCount, tripPurpose, includeRecommendations, generateMutation]);
 
   const deleteMutation = useMutation({
     mutationFn: () => deletePlan(collectionId),
@@ -133,7 +155,13 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       <EmptyPlanState 
         durationDays={durationDays}
         setDurationDays={setDurationDays}
-        onGenerate={() => generateMutation.mutate()}
+        peopleCount={peopleCount}
+        setPeopleCount={setPeopleCount}
+        tripPurpose={tripPurpose}
+        setTripPurpose={setTripPurpose}
+        includeRecommendations={includeRecommendations}
+        setIncludeRecommendations={setIncludeRecommendations}
+        onGenerate={handleGenerate}
         isGenerating={isGenerating}
         error={generateMutation.error?.message || (hasFailed ? 'Plan generation failed. Please try again.' : undefined)}
       />
@@ -186,7 +214,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>Your places have changed since this plan was created.</span>
           <button
-            onClick={() => generateMutation.mutate()}
+            onClick={handleGenerate}
             className="ml-auto text-amber-900 font-medium hover:underline"
             data-testid="button-regenerate-plan"
           >
@@ -237,7 +265,7 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
 
       <div className="flex gap-2 pt-4">
         <button
-          onClick={() => generateMutation.mutate()}
+          onClick={handleGenerate}
           disabled={isGenerating}
           className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg border border-border hover:bg-muted transition-colors"
           data-testid="button-regenerate-plan-bottom"
@@ -274,61 +302,144 @@ function EmptyPlacesState() {
 interface EmptyPlanStateProps {
   durationDays: number;
   setDurationDays: (days: number) => void;
+  peopleCount: string;
+  setPeopleCount: (count: string) => void;
+  tripPurpose: string;
+  setTripPurpose: (purpose: string) => void;
+  includeRecommendations: boolean;
+  setIncludeRecommendations: (include: boolean) => void;
   onGenerate: () => void;
   isGenerating: boolean;
   error?: string;
 }
 
-function EmptyPlanState({ durationDays, setDurationDays, onGenerate, isGenerating, error }: EmptyPlanStateProps) {
+function EmptyPlanState({ 
+  durationDays, 
+  setDurationDays, 
+  peopleCount,
+  setPeopleCount,
+  tripPurpose,
+  setTripPurpose,
+  includeRecommendations,
+  setIncludeRecommendations,
+  onGenerate, 
+  isGenerating, 
+  error 
+}: EmptyPlanStateProps) {
   return (
-    <div className="py-8 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-primary/30 flex items-center justify-center">
-        <Sparkles className="w-8 h-8 text-primary" />
-      </div>
-      <h3 className="text-lg font-bold text-foreground mb-2">Create Your Travel Plan</h3>
-      <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-        Let AI organize your saved places into a day-by-day itinerary.
-      </p>
-
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <span className="text-sm text-muted-foreground">Plan for</span>
-        <select
-          value={durationDays}
-          onChange={(e) => setDurationDays(parseInt(e.target.value))}
-          className="px-3 py-1.5 text-sm font-medium rounded-lg border border-border bg-background"
-          data-testid="select-plan-duration"
-        >
-          {[1, 2, 3, 4, 5, 6, 7].map(n => (
-            <option key={n} value={n}>{n} {n === 1 ? 'day' : 'days'}</option>
-          ))}
-        </select>
-      </div>
-
-      {error && (
-        <div className="flex items-center justify-center gap-2 mb-4 text-sm text-destructive">
-          <AlertCircle className="w-4 h-4" />
-          <span>{error}</span>
+    <div className="py-8">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-primary/30 flex items-center justify-center">
+          <Sparkles className="w-8 h-8 text-primary" />
         </div>
-      )}
+        <h3 className="text-lg font-bold text-foreground mb-2">Create Your Travel Plan</h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+          Tell us about your trip and AI will organize your saved places into a personalized itinerary.
+        </p>
+      </div>
 
-      <button
-        onClick={onGenerate}
-        disabled={isGenerating}
-        className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-        data-testid="button-generate-plan"
-      >
-        {isGenerating ? (
-          <span className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Generating...
-          </span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            Generate Plan
-          </span>
+      <div className="space-y-4 max-w-sm mx-auto">
+        <div className="bg-muted/50 rounded-xl p-4 space-y-4">
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground block mb-1.5">Trip Duration</label>
+              <select
+                value={durationDays}
+                onChange={(e) => setDurationDays(parseInt(e.target.value))}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background"
+                data-testid="select-plan-duration"
+              >
+                {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                  <option key={n} value={n}>{n} {n === 1 ? 'day' : 'days'}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Users className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground block mb-1.5">Group Size</label>
+              <div className="flex gap-1.5">
+                {PEOPLE_COUNT_OPTIONS.map(option => (
+                  <button
+                    key={option}
+                    onClick={() => setPeopleCount(option)}
+                    className={cn(
+                      "flex-1 py-2 text-sm font-medium rounded-lg border transition-colors",
+                      peopleCount === option
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border hover:bg-muted"
+                    )}
+                    data-testid={`button-people-${option}`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Target className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground block mb-1.5">Trip Type</label>
+              <select
+                value={tripPurpose}
+                onChange={(e) => setTripPurpose(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background"
+                data-testid="select-trip-purpose"
+              >
+                {TRIP_PURPOSE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2 border-t border-border/50">
+            <Lightbulb className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-foreground block">AI Suggestions</label>
+                <p className="text-xs text-muted-foreground">Include restaurant & activity ideas</p>
+              </div>
+              <Switch
+                checked={includeRecommendations}
+                onCheckedChange={setIncludeRecommendations}
+                data-testid="switch-recommendations"
+              />
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="flex items-center justify-center gap-2 text-sm text-destructive">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </div>
         )}
-      </button>
+
+        <button
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className="w-full px-6 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+          data-testid="button-generate-plan"
+        >
+          {isGenerating ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Generate Plan
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

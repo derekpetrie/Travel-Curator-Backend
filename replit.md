@@ -124,6 +124,9 @@ Examples:
 - Dropdowns → Use `Select` or `DropdownMenu`
 
 ## Recent Changes
+- 2026-01-08: Trip personalization for AI plans - group size (1, 2, 3-4, 5+), trip type (date, family, friends, solo, business), AI suggestions toggle
+- 2026-01-08: AI plan generation now uses trip context for personalized recommendations
+- 2026-01-08: Plans schema extended with peopleCount, tripPurpose, includeRecommendations fields
 - 2026-01-08: Removed all public sharing functionality (no public Venturr or plan sharing)
 - 2026-01-08: Soft delete for Venturrs - marks deletedAt instead of hard delete, preserving posts/places
 - 2026-01-08: Discovery attribution in PlaceDrawer - links to original TikTok/Instagram post

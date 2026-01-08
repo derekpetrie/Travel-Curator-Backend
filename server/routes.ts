@@ -833,7 +833,12 @@ export async function registerRoutes(
     try {
       const collectionId = parseInt(req.params.id);
       const userId = getUserId(req);
-      const { durationDays = 3 } = req.body;
+      const { 
+        durationDays = 3, 
+        peopleCount = "2", 
+        tripPurpose = "friends_outing",
+        includeRecommendations = false 
+      } = req.body;
       
       // Verify user owns this collection
       const collection = await storage.getCollection(collectionId, userId);
@@ -858,12 +863,21 @@ export async function registerRoutes(
       const placesHash = generatePlacesSnapshotHash(places);
       
       if (plan) {
-        plan = await storage.updatePlan(plan.id, { status: 'generating', durationDays });
+        plan = await storage.updatePlan(plan.id, { 
+          status: 'generating', 
+          durationDays,
+          peopleCount,
+          tripPurpose,
+          includeRecommendations
+        });
       } else {
         plan = await storage.createPlan({
           collectionId,
           status: 'generating',
           durationDays,
+          peopleCount,
+          tripPurpose,
+          includeRecommendations,
           placesSnapshotHash: placesHash,
         });
       }
@@ -876,7 +890,7 @@ export async function registerRoutes(
       res.json({ plan, message: "Plan generation started" });
       
       // Generate plan asynchronously
-      generatePlanAsync(plan.id, collection.title, places, durationDays, placesHash);
+      generatePlanAsync(plan.id, collection.title, places, durationDays, placesHash, peopleCount, tripPurpose, includeRecommendations);
       
     } catch (error) {
       console.error("Error starting plan generation:", error);
@@ -946,16 +960,35 @@ function generatePlacesSnapshotHash(places: { id: number }[]): string {
   return ids.join(',');
 }
 
+// Map trip purpose codes to human-readable descriptions
+const TRIP_PURPOSE_LABELS: Record<string, string> = {
+  date_night: "a romantic date",
+  family_trip: "a family trip with children",
+  friends_outing: "a group of friends",
+  solo: "solo travel",
+  business: "a business trip with leisure time",
+};
+
+const PEOPLE_COUNT_CONTEXT: Record<string, string> = {
+  "1": "traveling alone",
+  "2": "traveling as a couple",
+  "3-4": "a small group of 3-4 people",
+  "5+": "a larger group of 5+ people",
+};
+
 // Async plan generation using AI
 async function generatePlanAsync(
   planId: number,
   collectionTitle: string,
   places: any[],
   durationDays: number,
-  placesHash: string
+  placesHash: string,
+  peopleCount: string = "2",
+  tripPurpose: string = "friends_outing",
+  includeRecommendations: boolean = false
 ) {
   try {
-    console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days`);
+    console.log(`[Plan] Generating plan for ${places.length} places over ${durationDays} days (${peopleCount} people, ${tripPurpose}, recommendations: ${includeRecommendations})`);
     
     // Calculate travel time matrix for places with coordinates
     const placesWithCoords = places.filter(p => p.lat && p.lng).map(p => ({
@@ -989,7 +1022,41 @@ async function generatePlanAsync(
       }
     });
     
+    // Build personalization context
+    const purposeLabel = TRIP_PURPOSE_LABELS[tripPurpose] || "a casual trip";
+    const peopleLabel = PEOPLE_COUNT_CONTEXT[peopleCount] || "a small group";
+    
+    const personalizationContext = `
+## TRIP CONTEXT:
+- This is ${purposeLabel}
+- Party size: ${peopleLabel}
+- Tailor your recommendations to this context (e.g., romantic spots for dates, kid-friendly for families, social venues for friends)
+`;
+
+    const recommendationsInstructions = includeRecommendations ? `
+## AI RECOMMENDATIONS:
+You may suggest 1-2 additional places per day that would complement the saved places.
+For recommended places (NOT from the user's saved list), use this block format:
+{
+  "id": "rec-unique-id",
+  "title": "Suggested: Restaurant Name",
+  "timeOfDay": "evening",
+  "placeIds": [],
+  "notes": "Why this place fits",
+  "isRecommendation": true,
+  "recommendationStatus": "pending",
+  "recommendedPlace": {
+    "name": "Restaurant Name",
+    "category": "places to eat",
+    "description": "Brief description of why it's a good fit",
+    "estimatedDuration": "1-2 hours"
+  }
+}
+Only recommend places that genuinely fit the trip purpose and location. Focus on restaurants, cafes, or activities that complement the saved places.
+` : '';
+
     const prompt = `You are a travel planning assistant. Create a ${durationDays}-day itinerary for a trip called "${collectionTitle}".
+${personalizationContext}
 
 ## SAVED PLACES (with estimated visit durations):
 ${JSON.stringify(placesSummary, null, 2)}
@@ -1013,7 +1080,7 @@ ${travelTimeContext.length > 0 ? `## TRAVEL TIMES BETWEEN PLACES:\n${travelTimeC
 4. All-day activities get their own day
 5. "Places to eat" are flexible (30-90 min) and can pair with activities
 6. Group nearby places together to minimize travel time
-
+${recommendationsInstructions}
 ## OUTPUT FORMAT:
 Return ONLY valid JSON (no markdown):
 {

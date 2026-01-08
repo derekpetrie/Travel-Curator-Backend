@@ -131,6 +131,9 @@ export const plans = pgTable("plans", {
   collectionId: integer("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
   status: text("status").default("idle").notNull(), // "idle" | "generating" | "ready" | "failed"
   durationDays: integer("duration_days"),
+  peopleCount: text("people_count"), // "1" | "2" | "3-4" | "5+"
+  tripPurpose: text("trip_purpose"), // "date_night" | "family_trip" | "friends_outing" | "solo" | "business"
+  includeRecommendations: boolean("include_recommendations").default(false),
   content: jsonb("content"), // PlanContent JSON structure
   placesSnapshotHash: text("places_snapshot_hash"), // Hash of place IDs to detect changes
   generatedAt: timestamp("generated_at"),
@@ -154,6 +157,14 @@ export const planBlockSchema = z.object({
   timeOfDay: z.enum(["morning", "afternoon", "evening", "flexible"]).optional(),
   placeIds: z.array(z.number()),
   notes: z.string().optional(),
+  isRecommendation: z.boolean().optional(), // AI-suggested block not from user's places
+  recommendationStatus: z.enum(["pending", "confirmed", "rejected"]).optional(),
+  recommendedPlace: z.object({
+    name: z.string(),
+    category: z.string(),
+    description: z.string(),
+    estimatedDuration: z.string().optional(),
+  }).optional(),
 });
 
 export const planDaySchema = z.object({
