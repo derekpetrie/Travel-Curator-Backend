@@ -1,0 +1,201 @@
+Yep. You have a share button (`data-testid="button-share"`) but it doesn’t do anything yet, and you don’t have a short/share slug to copy.
+
+You want:
+
+* **iPhone:** tap the short link text → copies
+* **Desktop:** click a copy icon → copies
+* **Shortened link:** use something like `/v/<slug>` (or `/venturr/<slug>`) rather than a long URL
+
+### What to do (clean + reliable)
+
+#### A) Make sure your backend returns a short slug
+
+You need `collection.shareSlug` (or similar) from `fetchCollection`. If you don’t have it yet, you’ll need an endpoint like:
+
+* `shareCollection(collectionId, isPublic)` → returns `{ shareSlug, shareUrl }`
+
+You already have this pattern for plans (`sharePlan`). Do the same for collections/venturrs.
+
+For now, I’ll assume `collection.shareSlug` exists (or you can add it).
+
+---
+
+## 1) Add a small “Share sheet” UI (tap link to copy + copy icon)
+
+Add these imports:
+
+```tsx
+import { Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
+```
+
+Add state near the top of `VenturrDetail`:
+
+```tsx
+const [shareOpen, setShareOpen] = useState(false);
+const [copied, setCopied] = useState(false);
+```
+
+Add helpers:
+
+```tsx
+const shareUrl = collection.shareSlug
+  ? `${window.location.origin}/v/${collection.shareSlug}`
+  : `${window.location.origin}/venturr/${collectionId}`; // fallback
+
+async function copyToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // iOS/Safari fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+```
+
+Now make your share button open the sheet:
+
+Replace:
+
+```tsx
+<button 
+  className="w-9 h-9 rounded-full bg-muted ..."
+  data-testid="button-share"
+>
+```
+
+With:
+
+```tsx
+<button
+  onClick={() => setShareOpen(true)}
+  className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground"
+  data-testid="button-share"
+>
+  <Share2 className="w-4 h-4" />
+</button>
+```
+
+---
+
+## 2) Add the share UI (Radix Dialog — iOS friendly)
+
+If you already use Radix via shadcn, import Dialog:
+
+```tsx
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+```
+
+Then add this near the bottom of your JSX (before `</div>`):
+
+```tsx
+<Dialog open={shareOpen} onOpenChange={setShareOpen}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle>Share Venturr</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Tap the link to copy (iPhone), or use the copy button (desktop).
+      </p>
+
+      <div className="flex items-center gap-2">
+        {/* Tappable link pill */}
+        <button
+          onClick={async () => {
+            await copyToClipboard(shareUrl);
+            setCopied(true);
+            toast.success('Link copied');
+            setTimeout(() => setCopied(false), 1200);
+          }}
+          className="flex-1 text-left px-3 py-2 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors"
+        >
+          <div className="text-xs text-muted-foreground">Share link</div>
+          <div className="font-mono text-sm truncate">{shareUrl}</div>
+        </button>
+
+        {/* Copy icon (desktop-friendly) */}
+        <button
+          onClick={async () => {
+            await copyToClipboard(shareUrl);
+            setCopied(true);
+            toast.success('Link copied');
+            setTimeout(() => setCopied(false), 1200);
+          }}
+          className="h-10 w-10 rounded-lg border border-border hover:bg-muted flex items-center justify-center"
+          aria-label="Copy share link"
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
+This accomplishes:
+
+* iPhone: big tappable pill → copies
+* Desktop: copy icon → copies
+* Plain short URL shown
+
+---
+
+## 3) Actually make it a *short* link
+
+Right now you don’t have a short route. Do this:
+
+### Backend / API
+
+Create a slug like `collection.shareSlug = "k3p9a2"` and serve:
+
+* `/v/:slug` → loads the public venturr detail page
+
+### Frontend routing
+
+Add a route to your router:
+
+* `/v/:slug` → `VenturrPublic` page (fetch by slug)
+
+Then `shareUrl` becomes:
+
+```ts
+`${window.location.origin}/v/${collection.shareSlug}`
+```
+
+That’s short + pretty.
+
+---
+
+## 4) If you *don’t* have shareSlug yet
+
+You’ll need to add it to `fetchCollection` response. Minimal interim fallback:
+
+```ts
+const shareUrl = `${window.location.origin}/venturr/${collectionId}`;
+```
+
+…but it won’t be short until you add the slug route.
+
+---
+
+### Quick question (so I don’t guess wrong)
+
+Do you already have a “public venturr” endpoint/slug anywhere (like you do for plans with `plan.shareSlug`), or do we need to add the share slug + route for collections from scratch?
+
+If you paste your `fetchCollection` response shape (or `@shared/schema` for collection), I’ll wire this to the exact field names you have.

@@ -5,6 +5,7 @@ import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Ca
 import { cn } from '@/lib/utils';
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+
 interface PlanTabProps {
   collectionId: number;
   places: PlaceWithEnrichment[];

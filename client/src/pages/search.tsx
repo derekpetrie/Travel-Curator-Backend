@@ -170,14 +170,16 @@ export default function Explore() {
           </div>
         </div>
 
-        <ScrollArea className="-mx-6">
-          <div className="flex gap-2 px-6 pb-2">
+        <ScrollArea className="-mx-6 w-[calc(100%+3rem)]">
+          {/* This inner div must overflow horizontally */}
+          <div className="flex flex-nowrap gap-2 px-6 pb-2">
             {CATEGORY_FILTERS.map((filter) => (
               <button
                 key={filter.key || 'all'}
                 onClick={() => setCategoryFilter(filter.key)}
                 className={cn(
-                  'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
+                  // ✅ critical: shrink-0 + whitespace-nowrap
+                  'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
                   categoryFilter === filter.key
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -189,8 +191,11 @@ export default function Explore() {
               </button>
             ))}
           </div>
-          <ScrollBar orientation="horizontal" className="invisible" />
+
+          {/* Keep it scrollable but hide bar */}
+          <ScrollBar orientation="horizontal" className="h-2 opacity-0" />
         </ScrollArea>
+
       </div>
 
       <div className="flex-1 relative min-h-0">
