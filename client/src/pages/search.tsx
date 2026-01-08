@@ -296,8 +296,7 @@ export default function Explore() {
         isAddingToCollection={isAddingToCollection}
       />
 
-      {/* IMPORTANT: ensure your TabBar "+" has data-testid="tabbar-add" for openAddPlace() */}
-      <TabBar />
+      <TabBar onAddClick={openAddPlace} />
     </div>
   );
 }
