@@ -213,6 +213,64 @@ export async function registerRoutes(
     }
   });
 
+  // Share/unshare a Venturr
+  app.post("/api/collections/:id/share", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = getUserId(req);
+      const { isPublic } = req.body;
+
+      const collection = await storage.getCollection(id, userId);
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+
+      // Generate a share slug if making public and none exists
+      let shareSlug = collection.shareSlug || undefined;
+      if (isPublic && !shareSlug) {
+        // Generate a short, URL-friendly slug based on title
+        shareSlug = `${collection.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30)}-${Date.now().toString(36)}`;
+      }
+
+      const updated = await storage.updateCollection(id, userId, { isPublic, shareSlug });
+
+      const shareUrl = isPublic ? `/v/${shareSlug}` : null;
+      res.json({ collection: updated, shareUrl });
+    } catch (error) {
+      console.error("Error sharing collection:", error);
+      res.status(500).json({ error: "Failed to share collection" });
+    }
+  });
+
+  // Get public Venturr by slug (no auth required)
+  app.get("/api/v/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const collection = await storage.getCollectionBySlug(slug);
+      
+      if (!collection) {
+        return res.status(404).json({ error: "Venturr not found" });
+      }
+
+      // Get places for this collection
+      const placesWithLinks = await storage.getPlacesForCollection(collection.id);
+
+      res.json({ 
+        collection: {
+          id: collection.id,
+          title: collection.title,
+          coverImage: collection.coverImage,
+          coverGradient: collection.coverGradient,
+          summary: collection.summary,
+        },
+        places: placesWithLinks
+      });
+    } catch (error) {
+      console.error("Error fetching public venturr:", error);
+      res.status(500).json({ error: "Failed to fetch venturr" });
+    }
+  });
+
   // Generate/refresh collection summary
   app.post("/api/collections/:id/summary", isAuthenticated, async (req, res) => {
     try {
