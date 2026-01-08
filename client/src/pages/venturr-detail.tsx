@@ -6,12 +6,14 @@ import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
 import { EditVenturrDrawer } from '@/components/EditVenturrDrawer';
 import { PlanTab } from '@/components/PlanTab';
-import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil, CalendarDays, MapPin } from 'lucide-react';
+import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil, CalendarDays, MapPin, Copy, Check } from 'lucide-react';
 import { Link } from 'wouter';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollection, fetchPosts, fetchPlaces, generateSummary, renameCollection, deletePost } from '@/lib/api';
+import { fetchCollection, fetchPosts, fetchPlaces, generateSummary, renameCollection, deletePost, shareCollection } from '@/lib/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 import type { PlaceWithEnrichment } from '@shared/schema';
 
 export default function VenturrDetail() {
@@ -22,6 +24,8 @@ export default function VenturrDetail() {
   const [showEditDrawer, setShowEditDrawer] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithEnrichment | null>(null);
   const [placeDrawerOpen, setPlaceDrawerOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: collection, isLoading: collectionLoading } = useQuery({
@@ -70,6 +74,49 @@ export default function VenturrDetail() {
       queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
     },
   });
+
+  const shareMutation = useMutation({
+    mutationFn: () => shareCollection(collectionId, true),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+    },
+  });
+
+  const shareUrl = collection?.shareSlug
+    ? `${window.location.origin}/v/${collection.shareSlug}`
+    : null;
+
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  }
+
+  const handleShare = async () => {
+    if (!collection?.isPublic || !shareUrl) {
+      await shareMutation.mutateAsync();
+    }
+    setShareOpen(true);
+  };
+
+  const handleCopyLink = async () => {
+    const url = shareUrl || `${window.location.origin}/v/${collection?.shareSlug}`;
+    await copyToClipboard(url);
+    setCopied(true);
+    toast.success('Link copied');
+    setTimeout(() => setCopied(false), 1200);
+  };
 
   // Auto-generate summary if there are places but no summary
   useEffect(() => {
@@ -150,10 +197,16 @@ export default function VenturrDetail() {
                    <Pencil className="w-4 h-4" />
                  </button>
                  <button 
-                   className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground" 
+                   onClick={handleShare}
+                   disabled={shareMutation.isPending}
+                   className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground disabled:opacity-50" 
                    data-testid="button-share"
                  >
-                   <Share2 className="w-4 h-4" />
+                   {shareMutation.isPending ? (
+                     <Loader2 className="w-4 h-4 animate-spin" />
+                   ) : (
+                     <Share2 className="w-4 h-4" />
+                   )}
                  </button>
                </div>
              </div>
@@ -321,6 +374,33 @@ export default function VenturrDetail() {
         venturr={collection}
         onSaveTitle={handleSaveTitle}
       />
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="w-[90%] max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Share Venturr</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Anyone with the link can view this Venturr and its places.
+            </p>
+            {shareUrl && (
+              <button
+                onClick={handleCopyLink}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-muted rounded-xl text-left hover:bg-muted/80 transition-colors"
+                data-testid="button-copy-share-link"
+              >
+                <span className="text-sm font-medium truncate">{shareUrl}</span>
+                {copied ? (
+                  <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                ) : (
+                  <Copy className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                )}
+              </button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

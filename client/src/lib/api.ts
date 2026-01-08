@@ -208,6 +208,44 @@ export async function fetchCollectionsForPlace(placeId: number): Promise<{ id: n
   return response.json();
 }
 
+// Collection (Venturr) sharing
+export async function shareCollection(collectionId: number, isPublic: boolean): Promise<{ collection: Collection; shareUrl: string | null; shareSlug: string | null }> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isPublic }),
+  });
+  if (!response.ok) throw new Error('Failed to share venturr');
+  return response.json();
+}
+
+export interface PublicVenturr {
+  collection: {
+    id: number;
+    title: string;
+    coverImage: string | null;
+    coverGradient: string | null;
+    summary: string | null;
+  };
+  places: Array<{
+    id: number;
+    name: string;
+    city: string | null;
+    country: string | null;
+    category: string;
+    lat: number | null;
+    lng: number | null;
+    photoUrl: string | null;
+    rating: number | null;
+  }>;
+}
+
+export async function fetchPublicVenturr(slug: string): Promise<PublicVenturr> {
+  const response = await fetch(`${API_BASE}/v/${slug}`);
+  if (!response.ok) throw new Error('Failed to fetch venturr');
+  return response.json();
+}
+
 export async function copyPlacesToCollection(
   targetCollectionId: number, 
   placeIds: number[]
