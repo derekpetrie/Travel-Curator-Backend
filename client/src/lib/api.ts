@@ -179,6 +179,22 @@ export async function sharePlan(collectionId: number, isPublic: boolean): Promis
   return response.json();
 }
 
+export async function shareCollection(collectionId: number, isPublic: boolean): Promise<{ collection: Collection; shareUrl: string | null }> {
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isPublic }),
+  });
+  if (!response.ok) throw new Error('Failed to share venturr');
+  return response.json();
+}
+
+export async function fetchPublicVenturr(slug: string): Promise<{ collection: { id: number; title: string; coverImage: string | null; coverGradient: string | null; summary: string | null }; places: PlaceWithEnrichment[] }> {
+  const response = await fetch(`${API_BASE}/v/${slug}`);
+  if (!response.ok) throw new Error('Venturr not found');
+  return response.json();
+}
+
 export async function fetchPublicPlan(slug: string): Promise<{ plan: Plan; places: Place[]; collectionTitle: string }> {
   const response = await fetch(`${API_BASE}/plans/${slug}`);
   if (!response.ok) throw new Error('Failed to fetch plan');
