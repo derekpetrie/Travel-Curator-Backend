@@ -12,6 +12,8 @@ export const collections = pgTable("collections", {
   coverImage: text("cover_image"),
   coverGradient: text("cover_gradient"),
   summary: text("summary"),
+  isPublic: boolean("is_public").default(false).notNull(),
+  shareSlug: text("share_slug"),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
