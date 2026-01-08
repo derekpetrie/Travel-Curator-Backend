@@ -1,11 +1,12 @@
 import { TabBar } from '@/components/TabBar';
 import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus } from 'lucide-react';
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection, getPhotoUrl } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
 import { AddPostDrawer } from '@/components/AddPostDrawer';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import type { PlaceWithEnrichment } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -169,24 +170,27 @@ export default function Explore() {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto -mx-6 px-6 no-scrollbar">
-          {CATEGORY_FILTERS.map((filter) => (
-            <button
-              key={filter.key || 'all'}
-              onClick={() => setCategoryFilter(filter.key)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
-                categoryFilter === filter.key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              )}
-              data-testid={`filter-${filter.key || 'all'}`}
-            >
-              {filter.icon && <filter.icon className="w-3.5 h-3.5" />}
-              {filter.label}
-            </button>
-          ))}
-        </div>
+        <ScrollArea className="-mx-6">
+          <div className="flex gap-2 px-6 pb-2">
+            {CATEGORY_FILTERS.map((filter) => (
+              <button
+                key={filter.key || 'all'}
+                onClick={() => setCategoryFilter(filter.key)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
+                  categoryFilter === filter.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+                data-testid={`filter-${filter.key || 'all'}`}
+              >
+                {filter.icon && <filter.icon className="w-3.5 h-3.5" />}
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="invisible" />
+        </ScrollArea>
       </div>
 
       <div className="flex-1 relative min-h-0">
