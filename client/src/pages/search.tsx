@@ -168,7 +168,7 @@ export default function Explore() {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 no-scrollbar">
+        <div className="flex gap-2 overflow-x-auto -mx-6 px-6 no-scrollbar">
           {CATEGORY_FILTERS.map((filter) => (
             <button
               key={filter.key || 'all'}
