@@ -118,20 +118,8 @@ export function PlaceMap({
   const initialViewState = {
     longitude: validPlaces.length > 0 ? validPlaces[0].lng || 0 : 0,
     latitude: validPlaces.length > 0 ? validPlaces[0].lat || 20 : 20,
-    zoom: 2,
+    zoom: validPlaces.length > 0 ? 2 : 1,
   };
-
-  if (validPlaces.length === 0) {
-    return (
-      <div className="w-full h-full min-h-[400px] bg-muted flex items-center justify-center">
-        <div className="text-center p-8">
-          <MapPin className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-          <p className="text-muted-foreground font-medium">No places with coordinates yet</p>
-          <p className="text-sm text-muted-foreground/70 mt-1">Add posts with travel locations to see them on the map</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <Map
