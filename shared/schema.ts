@@ -150,6 +150,28 @@ export const insertPlanSchema = createInsertSchema(plans).omit({
   updatedAt: true,
 });
 
+// Recommended place schema - mirrors PlaceCard display fields
+export const recommendedPlaceSchema = z.object({
+  name: z.string(),
+  category: z.enum(["things to do", "places to eat", "places to stay"]),
+  description: z.string(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  addressFull: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  rating: z.number().min(0).max(10).optional(),
+  priceLevel: z.number().min(1).max(4).optional(),
+  hoursDisplay: z.string().optional(),
+  website: z.string().optional(),
+  phone: z.string().optional(),
+  photoUrl: z.string().optional(),
+  estimatedDurationMinutes: z.number().optional(),
+  whyRecommended: z.string().optional(), // AI explanation for why this place fits the trip
+});
+
+export type RecommendedPlace = z.infer<typeof recommendedPlaceSchema>;
+
 // Plan content structure for type safety
 export const planBlockSchema = z.object({
   id: z.string(),
@@ -159,12 +181,7 @@ export const planBlockSchema = z.object({
   notes: z.string().optional(),
   isRecommendation: z.boolean().optional(), // AI-suggested block not from user's places
   recommendationStatus: z.enum(["pending", "confirmed", "rejected"]).optional(),
-  recommendedPlace: z.object({
-    name: z.string(),
-    category: z.string(),
-    description: z.string(),
-    estimatedDuration: z.string().optional(),
-  }).optional(),
+  recommendedPlace: recommendedPlaceSchema.optional(),
 });
 
 export const planDaySchema = z.object({

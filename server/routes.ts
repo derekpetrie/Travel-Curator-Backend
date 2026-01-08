@@ -1033,26 +1033,44 @@ async function generatePlanAsync(
 - Tailor your recommendations to this context (e.g., romantic spots for dates, kid-friendly for families, social venues for friends)
 `;
 
+    // Get the main city from the user's saved places for context
+    const mainCity = places[0]?.city || 'the destination';
+    const mainCountry = places[0]?.country || '';
+    
     const recommendationsInstructions = includeRecommendations ? `
 ## AI RECOMMENDATIONS:
 You may suggest 1-2 additional places per day that would complement the saved places.
-For recommended places (NOT from the user's saved list), use this block format:
+Recommendations should be REAL places in ${mainCity}${mainCountry ? `, ${mainCountry}` : ''} that you know exist.
+
+For recommended places (NOT from the user's saved list), use this block format with COMPLETE place details:
 {
   "id": "rec-unique-id",
-  "title": "Suggested: Restaurant Name",
+  "title": "Suggested: Place Name",
   "timeOfDay": "evening",
   "placeIds": [],
-  "notes": "Why this place fits",
+  "notes": null,
   "isRecommendation": true,
   "recommendationStatus": "pending",
   "recommendedPlace": {
-    "name": "Restaurant Name",
+    "name": "Actual Place Name",
     "category": "places to eat",
-    "description": "Brief description of why it's a good fit",
-    "estimatedDuration": "1-2 hours"
+    "description": "What this place is known for and why it's special",
+    "city": "${mainCity}",
+    "country": "${mainCountry || 'USA'}",
+    "addressFull": "Full street address if known",
+    "rating": 8.5,
+    "priceLevel": 2,
+    "hoursDisplay": "Open daily 11am-10pm",
+    "website": "https://example.com",
+    "estimatedDurationMinutes": 90,
+    "whyRecommended": "Perfect for ${purposeLabel} because..."
   }
 }
-Only recommend places that genuinely fit the trip purpose and location. Focus on restaurants, cafes, or activities that complement the saved places.
+
+REQUIRED fields for recommendedPlace: name, category (must be "things to do", "places to eat", or "places to stay"), description, city, whyRecommended
+OPTIONAL but preferred: addressFull, rating (0-10 scale), priceLevel (1-4, where 1=$ and 4=$$$$), hoursDisplay, website, estimatedDurationMinutes
+
+Only recommend REAL, well-known places that genuinely exist. Focus on restaurants, cafes, bars, or activities that complement the saved places and fit the trip purpose.
 ` : '';
 
     const prompt = `You are a travel planning assistant. Create a ${durationDays}-day itinerary for a trip called "${collectionTitle}".

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPlan, generatePlan, deletePlan, updatePlan, getPhotoUrl, type GeneratePlanOptions } from '@/lib/api';
-import type { PlaceWithEnrichment, PlanContent, PlanBlock } from '@shared/schema';
-import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Users, Target, Lightbulb } from 'lucide-react';
+import type { PlaceWithEnrichment, PlanContent, PlanBlock, RecommendedPlace } from '@shared/schema';
+import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Users, Target, Lightbulb, Star, Navigation, Globe, Phone, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
 import { Switch } from '@/components/ui/switch';
@@ -458,6 +458,185 @@ function GeneratingState() {
   );
 }
 
+interface PlanPlaceCardProps {
+  place: PlaceWithEnrichment | RecommendedPlace;
+  isRecommendation: boolean;
+  recommendationStatus?: string;
+  isEditing: boolean;
+  onRemove: () => void;
+}
+
+function PlanPlaceCard({ place, isRecommendation, recommendationStatus, isEditing, onRemove }: PlanPlaceCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  
+  const name = place.name;
+  const category = place.category;
+  const location = ('addressFull' in place && place.addressFull) || 
+    [place.city, place.country].filter(Boolean).join(', ') || 
+    'Unknown location';
+  const rating = ('rating' in place && place.rating) ? place.rating : null;
+  const priceLevel = ('priceLevel' in place && place.priceLevel) ? place.priceLevel : null;
+  const hoursDisplay = ('hoursDisplay' in place && place.hoursDisplay) ? place.hoursDisplay : null;
+  const website = ('website' in place && place.website) ? place.website : null;
+  const phone = ('phone' in place && place.phone) ? place.phone : null;
+  const photoUrl = ('photoUrl' in place && place.photoUrl) ? place.photoUrl : null;
+  const lat = ('lat' in place && place.lat) ? place.lat : null;
+  const lng = ('lng' in place && place.lng) ? place.lng : null;
+  const description = ('description' in place && place.description) ? place.description : null;
+  const whyRecommended = ('whyRecommended' in place && place.whyRecommended) ? place.whyRecommended : null;
+  const placeId = ('id' in place && typeof place.id === 'number') ? place.id : null;
+  
+  const hasDetails = website || phone || hoursDisplay || description || whyRecommended;
+  
+  return (
+    <div 
+      className={cn(
+        "rounded-[14px] bg-white border shadow-sm overflow-hidden group",
+        isRecommendation ? "border-primary/30 bg-primary/5" : "border-neutral-200"
+      )}
+      data-testid={placeId ? `plan-place-${placeId}` : `plan-recommendation-${name}`}
+    >
+      <div className="flex">
+        {getPhotoUrl(photoUrl) ? (
+          <div className="w-20 h-20 flex-shrink-0 overflow-hidden">
+            <img 
+              src={getPhotoUrl(photoUrl)!} 
+              alt={name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="w-20 h-20 flex-shrink-0 bg-neutral-100 flex items-center justify-center">
+            {isRecommendation ? (
+              <Sparkles className="w-6 h-6 text-primary/50" />
+            ) : (
+              <MapPin className="w-6 h-6 text-neutral-300" />
+            )}
+          </div>
+        )}
+        
+        <div className="flex-1 p-2.5 min-w-0 flex flex-col justify-between">
+          <div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  {category && (
+                    <span className="px-1.5 py-0 rounded-full bg-coral-500/10 text-coral-500 text-[9px] font-bold uppercase tracking-wider">
+                      {category}
+                    </span>
+                  )}
+                  {isRecommendation && (
+                    <span className="px-1.5 py-0 rounded-full bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider">
+                      AI Pick
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-heading text-sm font-bold text-gunmetal-900 truncate">
+                  {name}
+                </h3>
+              </div>
+              
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {lat && lng && (
+                  <a 
+                    href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-gunmetal-500 hover:bg-coral-500/10 hover:text-coral-500 transition-colors"
+                    data-testid={`navigate-plan-place-${placeId || name}`}
+                  >
+                    <Navigation className="w-3 h-3" />
+                  </a>
+                )}
+                {isEditing && !isRecommendation && (
+                  <button
+                    onClick={onRemove}
+                    className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                    data-testid={`remove-plan-place-${placeId}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center text-gunmetal-500 text-xs mt-0.5">
+              <MapPin className="w-3 h-3 mr-0.5 flex-shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center gap-2 text-xs text-gunmetal-500">
+              {rating && (
+                <div className="flex items-center gap-0.5 font-medium text-gunmetal-700">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  {rating.toFixed(1)}
+                </div>
+              )}
+              {priceLevel && (
+                <span className="font-medium">
+                  {'$'.repeat(priceLevel)}
+                  <span className="text-gunmetal-300">{'$'.repeat(4 - priceLevel)}</span>
+                </span>
+              )}
+            </div>
+            
+            {hasDetails && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-xs text-coral-500 hover:text-coral-600 flex items-center gap-0.5"
+                data-testid={`expand-plan-place-${placeId || name}`}
+              >
+                {expanded ? 'Less' : 'More'}
+                {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {expanded && hasDetails && (
+        <div className="border-t border-neutral-100 px-3 py-2 bg-neutral-50 space-y-2">
+          {(description || whyRecommended) && (
+            <p className="text-xs text-gunmetal-600">
+              {whyRecommended || description}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3 text-xs text-gunmetal-600">
+            {hoursDisplay && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-gunmetal-400" />
+                <span>{hoursDisplay}</span>
+              </div>
+            )}
+            {website && (
+              <a
+                href={website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-coral-500 hover:text-coral-600"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[120px]">{website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</span>
+              </a>
+            )}
+            {phone && (
+              <a
+                href={`tel:${phone}`}
+                className="flex items-center gap-1 text-coral-500 hover:text-coral-600"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>{phone}</span>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface DayCardProps {
   day: {
     dayNumber: number;
@@ -468,6 +647,9 @@ interface DayCardProps {
       timeOfDay?: string;
       placeIds: number[];
       notes?: string | null;
+      isRecommendation?: boolean;
+      recommendationStatus?: string;
+      recommendedPlace?: RecommendedPlace;
     }>;
   };
   dayIndex: number;
@@ -541,36 +723,30 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
               )}
             </div>
             <div className="space-y-2 pl-5">
-              {block.placeIds.map((placeId) => {
-                const place = placesMap.get(placeId);
-                if (!place) return null;
-                return (
-                  <div key={placeId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 group" data-testid={`plan-place-${placeId}`}>
-                    {getPhotoUrl(place.photoUrl) ? (
-                      <img src={getPhotoUrl(place.photoUrl)!} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-foreground truncate">{place.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {place.city}{place.country ? `, ${place.country}` : ''}
-                      </p>
-                    </div>
-                    {isEditing && (
-                      <button
-                        onClick={() => onRemovePlace(blockIndex, placeId)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all"
-                        data-testid={`button-remove-place-${placeId}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+              {block.isRecommendation && block.recommendedPlace ? (
+                <PlanPlaceCard
+                  key={block.id}
+                  place={block.recommendedPlace}
+                  isRecommendation={true}
+                  recommendationStatus={block.recommendationStatus}
+                  isEditing={isEditing}
+                  onRemove={() => {}}
+                />
+              ) : (
+                block.placeIds.map((placeId) => {
+                  const place = placesMap.get(placeId);
+                  if (!place) return null;
+                  return (
+                    <PlanPlaceCard
+                      key={placeId}
+                      place={place}
+                      isRecommendation={false}
+                      isEditing={isEditing}
+                      onRemove={() => onRemovePlace(blockIndex, placeId)}
+                    />
+                  );
+                })
+              )}
             </div>
             {isEditing ? (
               <textarea
