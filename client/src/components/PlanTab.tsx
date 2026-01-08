@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchPlan, generatePlan, deletePlan, updatePlan, sharePlan, getPhotoUrl } from '@/lib/api';
+import { fetchPlan, generatePlan, deletePlan, updatePlan, getPhotoUrl } from '@/lib/api';
 import type { PlaceWithEnrichment, PlanContent } from '@shared/schema';
-import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Share2, Link, Copy, ChevronDown } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
 
 interface PlanTabProps {
@@ -17,20 +17,6 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   const [durationDays, setDurationDays] = useState(3);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState<PlanContent | null>(null);
-  const [showShareMenu, setShowShareMenu] = useState(false);
-  const shareMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
-        setShowShareMenu(false);
-      }
-    }
-    if (showShareMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showShareMenu]);
 
   const { data: planData, isLoading: planLoading, refetch } = useQuery({
     queryKey: ['plan', collectionId],
@@ -65,17 +51,6 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
       queryClient.invalidateQueries({ queryKey: ['plan', collectionId] });
       setIsEditing(false);
       setEditedContent(null);
-    },
-  });
-
-  const shareMutation = useMutation({
-    mutationFn: (isPublic: boolean) => sharePlan(collectionId, isPublic),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['plan', collectionId] });
-      if (data.shareUrl) {
-        const fullUrl = `${window.location.origin}${data.shareUrl}`;
-        navigator.clipboard.writeText(fullUrl).catch(() => {});
-      }
     },
   });
 
@@ -141,23 +116,6 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
     setEditedContent(newContent);
   }, [editedContent]);
 
-  const handleShare = useCallback(async () => {
-    await shareMutation.mutateAsync(true);
-    setShowShareMenu(false);
-  }, [shareMutation]);
-
-  const handleUnshare = useCallback(async () => {
-    await shareMutation.mutateAsync(false);
-    setShowShareMenu(false);
-  }, [shareMutation]);
-
-  const copyShareLink = useCallback(() => {
-    if (plan?.shareSlug) {
-      const fullUrl = `${window.location.origin}/plan/${plan.shareSlug}`;
-      navigator.clipboard.writeText(fullUrl).catch(() => {});
-    }
-  }, [plan?.shareSlug]);
-
   if (planLoading || placesLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -187,104 +145,40 @@ export function PlanTab({ collectionId, places, placesLoading }: PlanTabProps) {
   }
 
   const content = isEditing && editedContent ? editedContent : (plan.content as PlanContent);
-  const isPublic = plan.isPublic;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <button
-                onClick={saveEdits}
-                disabled={updateMutation.isPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                data-testid="button-save-plan"
-              >
-                {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                Save
-              </button>
-              <button
-                onClick={cancelEditing}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
-                data-testid="button-cancel-edit"
-              >
-                <X className="w-3.5 h-3.5" />
-                Cancel
-              </button>
-            </>
-          ) : (
+      <div className="flex items-center gap-2">
+        {isEditing ? (
+          <>
             <button
-              onClick={startEditing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
-              data-testid="button-edit-plan"
+              onClick={saveEdits}
+              disabled={updateMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              data-testid="button-save-plan"
             >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
+              {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save
             </button>
-          )}
-        </div>
-        
-        <div className="relative" ref={shareMenuRef}>
+            <button
+              onClick={cancelEditing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+              data-testid="button-cancel-edit"
+            >
+              <X className="w-3.5 h-3.5" />
+              Cancel
+            </button>
+          </>
+        ) : (
           <button
-            onClick={() => setShowShareMenu(!showShareMenu)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
-              isPublic 
-                ? "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20" 
-                : "border border-border hover:bg-muted"
-            )}
-            data-testid="button-share-menu"
+            onClick={startEditing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+            data-testid="button-edit-plan"
           >
-            <Share2 className="w-3.5 h-3.5" />
-            {isPublic ? 'Shared' : 'Share'}
-            <ChevronDown className="w-3 h-3" />
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
           </button>
-          
-          {showShareMenu && (
-            <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-border rounded-lg shadow-lg z-10 overflow-hidden">
-              {isPublic ? (
-                <>
-                  <button
-                    onClick={copyShareLink}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left hover:bg-muted transition-colors"
-                    data-testid="button-copy-link"
-                  >
-                    <Copy className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">Copy link</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {window.location.origin}/plan/{plan.shareSlug}
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleUnshare}
-                    disabled={shareMutation.isPending}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left hover:bg-muted transition-colors border-t border-border text-destructive"
-                    data-testid="button-unshare"
-                  >
-                    <X className="w-4 h-4" />
-                    Stop sharing
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleShare}
-                  disabled={shareMutation.isPending}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left hover:bg-muted transition-colors"
-                  data-testid="button-share-public"
-                >
-                  <Link className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">Create public link</div>
-                    <div className="text-xs text-muted-foreground">Anyone with the link can view</div>
-                  </div>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {isStale && (
