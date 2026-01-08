@@ -25,7 +25,13 @@ function getRandomGradient(): string {
   return `${gradient.from}, ${gradient.to}`;
 }
 
-export function AddPostDrawer({ children }: { children: React.ReactNode }) {
+interface AddPostDrawerProps {
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AddPostDrawer({ children, open: controlledOpen, onOpenChange }: AddPostDrawerProps) {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [url, setUrl] = useState('');
@@ -34,10 +40,21 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabType>('new');
   const [isSuccess, setIsSuccess] = useState(false);
   const [successCollectionId, setSuccessCollectionId] = useState<number | null>(null);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [manualCaption, setManualCaption] = useState('');
   const [needsManualCaption, setNeedsManualCaption] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
 
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ['collections'],
@@ -167,9 +184,11 @@ export function AddPostDrawer({ children }: { children: React.ReactNode }) {
       setOpen(isOpen);
       if (!isOpen) resetForm();
     }}>
-      <Drawer.Trigger asChild>
-        {children}
-      </Drawer.Trigger>
+      {children && (
+        <Drawer.Trigger asChild>
+          {children}
+        </Drawer.Trigger>
+      )}
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" />
         <Drawer.Content className="bg-card flex flex-col rounded-t-[10px] max-h-[85vh] fixed bottom-0 left-0 right-0 z-50 outline-none border-t border-border">

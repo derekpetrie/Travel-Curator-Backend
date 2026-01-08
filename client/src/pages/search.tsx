@@ -1,11 +1,10 @@
 import { TabBar } from '@/components/TabBar';
 import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus } from 'lucide-react';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection, getPhotoUrl } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
-import { AddPostDrawer } from '@/components/AddPostDrawer';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import type { PlaceWithEnrichment } from '@shared/schema';
 import { cn } from '@/lib/utils';
@@ -26,11 +25,6 @@ export default function Explore() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [isAddingToCollection, setIsAddingToCollection] = useState(false);
-  const addPostTriggerRef = useRef<HTMLButtonElement>(null);
-
-  const openAddPlace = () => {
-    addPostTriggerRef.current?.click();
-  };
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -305,11 +299,7 @@ export default function Explore() {
         isAddingToCollection={isAddingToCollection}
       />
 
-      <AddPostDrawer>
-        <button ref={addPostTriggerRef} className="hidden" aria-hidden="true" />
-      </AddPostDrawer>
-
-      <TabBar onAddClick={openAddPlace} />
+      <TabBar />
     </div>
   );
 }

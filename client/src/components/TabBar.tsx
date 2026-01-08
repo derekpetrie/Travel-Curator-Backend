@@ -1,73 +1,75 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Home, Compass, PlusSquare, Sparkles, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AddPostDrawer } from './AddPostDrawer';
 
-interface TabBarProps {
-  onAddClick?: () => void;
-}
-
-export function TabBar({ onAddClick }: TabBarProps) {
+export function TabBar() {
   const [location] = useLocation();
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 glass-tab pb-safe-bottom pt-2 px-6">
-      <div className="flex justify-between items-center max-w-md mx-auto h-16">
-        <Link
-          href="/"
-          className={cn(
-            "flex flex-col items-center gap-1 transition-colors",
-            location === '/' ? "text-primary" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Home className="w-6 h-6" strokeWidth={location === '/' ? 2.5 : 2} />
-          <span className="text-[10px] font-medium">Home</span>
-        </Link>
+    <>
+      <div className="fixed bottom-0 left-0 right-0 z-40 glass-tab pb-safe-bottom pt-2 px-6">
+        <div className="flex justify-between items-center max-w-md mx-auto h-16">
+          <Link
+            href="/"
+            className={cn(
+              "flex flex-col items-center gap-1 transition-colors",
+              location === '/' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Home className="w-6 h-6" strokeWidth={location === '/' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Home</span>
+          </Link>
 
-        <Link
-          href="/search"
-          className={cn(
-            "flex flex-col items-center gap-1 transition-colors",
-            location === '/search' ? "text-primary" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Compass className="w-6 h-6" strokeWidth={location === '/search' ? 2.5 : 2} />
-          <span className="text-[10px] font-medium">Explore</span>
-        </Link>
+          <Link
+            href="/search"
+            className={cn(
+              "flex flex-col items-center gap-1 transition-colors",
+              location === '/search' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Compass className="w-6 h-6" strokeWidth={location === '/search' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Explore</span>
+          </Link>
 
-        {onAddClick && (
           <button
-            onClick={onAddClick}
+            onClick={() => setAddDrawerOpen(true)}
             className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+            data-testid="button-add-post"
           >
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 text-white">
               <PlusSquare className="w-5 h-5" />
             </div>
             <span className="text-[10px] font-medium">Add</span>
           </button>
-        )}
 
-        <Link
-          href="/inspo"
-          className={cn(
-            "flex flex-col items-center gap-1 transition-colors",
-            location === '/inspo' ? "text-primary" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Sparkles className="w-6 h-6" strokeWidth={location === '/inspo' ? 2.5 : 2} />
-          <span className="text-[10px] font-medium">Inspo</span>
-        </Link>
+          <Link
+            href="/inspo"
+            className={cn(
+              "flex flex-col items-center gap-1 transition-colors",
+              location === '/inspo' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Sparkles className="w-6 h-6" strokeWidth={location === '/inspo' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Inspo</span>
+          </Link>
 
-        <Link
-          href="/profile"
-          className={cn(
-            "flex flex-col items-center gap-1 transition-colors",
-            location === '/profile' ? "text-primary" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <User className="w-6 h-6" strokeWidth={location === '/profile' ? 2.5 : 2} />
-          <span className="text-[10px] font-medium">Profile</span>
-        </Link>
+          <Link
+            href="/profile"
+            className={cn(
+              "flex flex-col items-center gap-1 transition-colors",
+              location === '/profile' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <User className="w-6 h-6" strokeWidth={location === '/profile' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Profile</span>
+          </Link>
+        </div>
       </div>
-    </div>
+
+      <AddPostDrawer open={addDrawerOpen} onOpenChange={setAddDrawerOpen} />
+    </>
   );
 }
