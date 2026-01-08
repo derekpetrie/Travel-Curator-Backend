@@ -12,6 +12,7 @@ import Search from "@/pages/search";
 import SavedPosts from "@/pages/saved-posts";
 import Landing from "@/pages/landing";
 import PublicPlan from "@/pages/public-plan";
+import PublicVenturr from "@/pages/public-venturr";
 
 function AuthenticatedRouter() {
   return (
@@ -30,11 +31,12 @@ function AppContent() {
   const { isLoading, isAuthenticated } = useAuth();
   const [location] = useLocation();
 
-  // Public plan routes don't require auth
-  if (location.startsWith('/plan/')) {
+  // Public routes don't require auth
+  if (location.startsWith('/plan/') || location.startsWith('/v/')) {
     return (
       <Switch>
         <Route path="/plan/:slug" component={PublicPlan} />
+        <Route path="/v/:slug" component={PublicVenturr} />
       </Switch>
     );
   }
