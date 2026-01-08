@@ -1,0 +1,104 @@
+In the meantime, here are the most common issues/improvements I see in this pattern, with drop-in fixes you can apply immediately.
+
+1) Prevent double-close conflicts between Drawer and Dialog
+
+Right now you have PlaceDrawer open and a Dialog that can open on top. If handleDrawerClose or handleDialogClose toggles shared state, you can end up with weird sequences (drawer closes dialog, dialog closes drawer, etc.).
+
+Fix: make the dialog close handler only close the dialog, and optionally reopen the drawer if you want.
+
+const handleDialogClose = (open: boolean) => {
+  if (isAdding) return; // block while adding
+  setAddToVenturrOpen(open);
+
+  // optional: if dialog closes, return focus to drawer, etc.
+  // if (!open) setDrawerOpen(true);
+};
+
+2) Disable all interactive buttons while isAdding
+
+You’re preventing outside click + escape, but users can still click the list buttons, “Create new Venturr”, etc. unless your isAdding logic covers it elsewhere.
+
+Drop-in: add disabled={isAdding} and a consistent disabled style.
+
+<button
+  onClick={() => setIsCreatingNew(true)}
+  disabled={isAdding}
+  className="... disabled:opacity-50 disabled:pointer-events-none"
+>
+  ...
+</button>
+
+
+And for collection items:
+
+<button
+  key={collection.id}
+  onClick={() => handleSelectCollection(collection)}
+  disabled={isAdding}
+  className="... disabled:opacity-50 disabled:pointer-events-none"
+>
+
+3) Handle “no collections” state
+
+If collections is empty, the UI will show just the create button and an empty scroll area.
+
+{collections.length === 0 ? (
+  <p className="text-sm text-gunmetal-500 px-1">
+    You don’t have any Venturrs yet. Create one to get started.
+  </p>
+) : (
+  <div className="max-h-64 overflow-y-auto space-y-2">
+    ...
+  </div>
+)}
+
+4) Make create flow submit-on-enter
+
+You’ve got autoFocus, but hitting Enter won’t trigger handleCreateAndAdd unless wrapped in a form.
+
+<form
+  onSubmit={(e) => {
+    e.preventDefault();
+    if (!newVenturrName.trim()) return;
+    handleCreateAndAdd();
+  }}
+  className="space-y-3"
+>
+  <Input ... />
+  <div className="flex gap-2">
+    ...
+    <button type="submit" ...>Create & Add</button>
+  </div>
+</form>
+
+5) Prevent accidental “Create & Add” during rapid clicks
+
+Even when not isAdding, users can double click quickly.
+
+<button
+  onClick={handleCreateAndAdd}
+  disabled={isAdding || !newVenturrName.trim()}
+  ...
+>
+
+
+…and in your handler:
+
+const handleCreateAndAdd = async () => {
+  if (isAdding) return;
+  setIsAdding(true);
+  try {
+    ...
+  } finally {
+    setIsAdding(false);
+  }
+};
+
+6) Accessibility: label the input and list
+
+DialogTitle is good, but the input would benefit from a label for screen readers.
+
+<label className="text-sm font-medium text-gunmetal-700" htmlFor="new-venturr">
+  Venturr name
+</label>
+<Input id="new-venturr" ... />
