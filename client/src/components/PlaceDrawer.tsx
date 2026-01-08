@@ -1,9 +1,10 @@
 import { Drawer } from 'vaul';
-import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp, FolderPlus, ExternalLink } from 'lucide-react';
+import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp, FolderPlus, ExternalLink, Plus, Loader2, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { PlaceWithEnrichment } from '@shared/schema';
+import type { PlaceWithEnrichment, Collection } from '@shared/schema';
 import { fetchCollectionsForPlace } from '@/lib/api';
+import { Input } from '@/components/ui/input';
 
 function getSourceDisplayName(source: string | null | undefined): string {
   if (!source) return 'social post';
@@ -19,8 +20,11 @@ interface PlaceDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   venturrName?: string;
-  onAddToVenturr?: (place: PlaceWithEnrichment) => void;
   showVenturrMembership?: boolean;
+  collections?: Collection[];
+  onAddToCollection?: (place: PlaceWithEnrichment, collectionId: number) => Promise<{ copiedCount: number }>;
+  onCreateAndAdd?: (place: PlaceWithEnrichment, title: string) => Promise<void>;
+  isAddingToCollection?: boolean;
 }
 
 function formatPhoneForDisplay(phone: string): string {
@@ -36,8 +40,22 @@ function formatWebsiteForDisplay(url: string): string {
   }
 }
 
-export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVenturr, showVenturrMembership = false }: PlaceDrawerProps) {
+export function PlaceDrawer({ 
+  place, 
+  open, 
+  onOpenChange, 
+  venturrName, 
+  showVenturrMembership = false,
+  collections = [],
+  onAddToCollection,
+  onCreateAndAdd,
+  isAddingToCollection = false
+}: PlaceDrawerProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showVenturrPicker, setShowVenturrPicker] = useState(false);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [newVenturrName, setNewVenturrName] = useState('');
+  const [addedToId, setAddedToId] = useState<number | null>(null);
 
   const { data: memberVenturrs = [] } = useQuery({
     queryKey: ['place-collections', place?.venturrPlaceId],
@@ -45,17 +63,63 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVen
     enabled: showVenturrMembership && open && !!place?.venturrPlaceId,
   });
 
+  const handleSelectCollection = async (collection: Collection) => {
+    if (!place || !onAddToCollection || isAddingToCollection) return;
+    try {
+      const result = await onAddToCollection(place, collection.id);
+      if (result.copiedCount > 0) {
+        setAddedToId(collection.id);
+        setTimeout(() => {
+          setShowVenturrPicker(false);
+          setAddedToId(null);
+        }, 800);
+      } else {
+        setShowVenturrPicker(false);
+      }
+    } catch {
+      // Error is handled by parent (toast), keep picker open for retry
+    }
+  };
+
+  const handleCreateAndAdd = async () => {
+    if (!place || !onCreateAndAdd || !newVenturrName.trim() || isAddingToCollection) return;
+    try {
+      await onCreateAndAdd(place, newVenturrName.trim());
+      setNewVenturrName('');
+      setIsCreatingNew(false);
+      setShowVenturrPicker(false);
+    } catch {
+      // Error is handled by parent (toast), keep form open for retry
+    }
+  };
+
+  const resetPickerState = () => {
+    setShowVenturrPicker(false);
+    setIsCreatingNew(false);
+    setNewVenturrName('');
+    setAddedToId(null);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      resetPickerState();
+    }
+    onOpenChange(newOpen);
+  };
+
   if (!place) return null;
 
   const hasDetails = place.website || place.phone || place.hoursDisplay;
   const location = place.addressFull || [place.city, place.country].filter(Boolean).join(', ') || 'Unknown location';
+  const showAddButton = !!onAddToCollection;
+  const canCreateNew = !!onCreateAndAdd;
 
   return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange}>
+    <Drawer.Root open={open} onOpenChange={handleOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Drawer.Content className="bg-background flex flex-col rounded-t-[20px] fixed bottom-0 left-0 right-0 z-50 outline-none">
-          <div className="p-4 bg-background rounded-t-[20px]">
+        <Drawer.Content className="bg-background flex flex-col rounded-t-[20px] fixed bottom-0 left-0 right-0 z-50 outline-none max-h-[85vh]">
+          <div className="p-4 bg-background rounded-t-[20px] overflow-y-auto">
             <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted mb-3" />
             
             <div className="rounded-[14px] bg-white border border-neutral-200 shadow-sm overflow-hidden">
@@ -123,22 +187,19 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVen
                           <span className="text-gunmetal-300">{'$'.repeat(4 - place.priceLevel)}</span>
                         </span>
                       )}
-                      {place.isOpenNow !== null && place.isOpenNow !== undefined && (
-                        <span className={`flex items-center gap-0.5 ${place.isOpenNow ? 'text-green-600' : 'text-gunmetal-400'}`}>
-                          <Clock className="w-3 h-3" />
-                          {place.isOpenNow ? 'Open' : 'Closed'}
-                        </span>
-                      )}
                     </div>
                     
                     {hasDetails && (
                       <button
                         onClick={() => setExpanded(!expanded)}
-                        className="text-xs text-coral-500 hover:text-coral-600 flex items-center gap-0.5"
-                        data-testid="button-expand-details"
+                        className="flex items-center text-xs text-coral-500 font-medium"
+                        data-testid="button-toggle-details"
                       >
-                        {expanded ? 'Less' : 'More'}
-                        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        {expanded ? (
+                          <>Less <ChevronUp className="w-3 h-3 ml-0.5" /></>
+                        ) : (
+                          <>More <ChevronDown className="w-3 h-3 ml-0.5" /></>
+                        )}
                       </button>
                     )}
                   </div>
@@ -221,23 +282,120 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVen
               </div>
             )}
 
-            {onAddToVenturr && (
-              <button
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAddToVenturr(place);
-                }}
-                className="mt-4 w-full py-3 rounded-[14px] bg-[#F25F5C] text-white font-semibold shadow-sm hover:bg-[#e04e4b] transition-colors flex items-center justify-center gap-2"
-                data-testid="button-add-to-venturr"
-              >
-                <FolderPlus className="w-4 h-4" />
-                Add to Venturr
-              </button>
+            {showAddButton && (
+              <div className="mt-4">
+                {!showVenturrPicker ? (
+                  <button
+                    onClick={() => setShowVenturrPicker(true)}
+                    className="w-full py-3 rounded-[14px] bg-[#F25F5C] text-white font-semibold shadow-sm hover:bg-[#e04e4b] transition-colors flex items-center justify-center gap-2"
+                    data-testid="button-add-to-venturr"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    Add to Venturr
+                  </button>
+                ) : (
+                  <div className="rounded-[14px] border border-neutral-200 bg-white overflow-hidden">
+                    <div className="px-3 py-2 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+                      <span className="text-sm font-medium text-gunmetal-900">Choose a Venturr</span>
+                      <button
+                        onClick={resetPickerState}
+                        className="text-xs text-gunmetal-500 hover:text-gunmetal-700"
+                        data-testid="button-cancel-picker"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    
+                    <div className="p-2 space-y-1.5 max-h-48 overflow-y-auto">
+                      {isCreatingNew ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleCreateAndAdd();
+                          }}
+                          className="space-y-2"
+                        >
+                          <Input
+                            type="text"
+                            value={newVenturrName}
+                            onChange={(e) => setNewVenturrName(e.target.value)}
+                            placeholder="Venturr name..."
+                            className="h-10 text-sm"
+                            autoFocus
+                            disabled={isAddingToCollection}
+                            data-testid="input-new-venturr-name"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCreatingNew(false);
+                                setNewVenturrName('');
+                              }}
+                              disabled={isAddingToCollection}
+                              className="flex-1 h-9 rounded-lg border border-neutral-200 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50"
+                              data-testid="button-cancel-create"
+                            >
+                              Back
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={!newVenturrName.trim() || isAddingToCollection}
+                              className="flex-1 h-9 rounded-lg bg-[#F25F5C] text-white text-sm font-medium hover:bg-[#e04e4b] disabled:opacity-50 flex items-center justify-center gap-1"
+                              data-testid="button-create-and-add"
+                            >
+                              {isAddingToCollection ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>Create & Add</>
+                              )}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          {canCreateNew && (
+                            <button
+                              onClick={() => setIsCreatingNew(true)}
+                              disabled={isAddingToCollection}
+                              className="w-full py-2.5 px-3 rounded-lg border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] text-sm font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                              data-testid="button-create-new-venturr"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Create new Venturr
+                            </button>
+                          )}
+
+                          {collections.length === 0 ? (
+                            <p className="text-xs text-gunmetal-500 text-center py-3">
+                              {canCreateNew ? 'No Venturrs yet. Create one above.' : 'No Venturrs available.'}
+                            </p>
+                          ) : (
+                            collections.map((collection) => (
+                              <button
+                                key={collection.id}
+                                onClick={() => handleSelectCollection(collection)}
+                                disabled={isAddingToCollection}
+                                className="w-full py-2.5 px-3 rounded-lg border border-neutral-200 bg-white text-left text-sm font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between disabled:opacity-50"
+                                data-testid={`button-select-venturr-${collection.id}`}
+                              >
+                                <span className="truncate text-gunmetal-900">{collection.title}</span>
+                                {addedToId === collection.id ? (
+                                  <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                ) : isAddingToCollection ? (
+                                  <Loader2 className="w-4 h-4 animate-spin text-gunmetal-400 flex-shrink-0" />
+                                ) : (
+                                  <FolderPlus className="w-4 h-4 text-gunmetal-400 flex-shrink-0" />
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </Drawer.Content>

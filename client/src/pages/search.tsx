@@ -1,14 +1,12 @@
 import { TabBar } from '@/components/TabBar';
-import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus, FolderPlus } from 'lucide-react';
-import { useState, useMemo, useRef } from 'react';
+import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
-import type { PlaceWithEnrichment, Collection } from '@shared/schema';
+import type { PlaceWithEnrichment } from '@shared/schema';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 const CATEGORY_FILTERS = [
@@ -24,12 +22,7 @@ export default function Explore() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithEnrichment | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  
-  const [addToVenturrOpen, setAddToVenturrOpen] = useState(false);
-  const [newVenturrName, setNewVenturrName] = useState('');
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const pendingPlaceRef = useRef<PlaceWithEnrichment | null>(null);
+  const [isAddingToCollection, setIsAddingToCollection] = useState(false);
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -51,13 +44,10 @@ export default function Explore() {
   const copyMutation = useMutation({
     mutationFn: ({ collectionId, placeIds }: { collectionId: number; placeIds: number[] }) => 
       copyPlacesToCollection(collectionId, placeIds),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-places'] });
       queryClient.invalidateQueries({ queryKey: ['collections'] });
       queryClient.invalidateQueries({ queryKey: ['place-collections'] });
-    },
-    onError: () => {
-      toast.error('Failed to add place');
     },
   });
 
@@ -87,81 +77,54 @@ export default function Explore() {
     }
   };
 
-  const handleAddToVenturr = (place: PlaceWithEnrichment) => {
-    if (place.venturrPlaceId == null) return;
-
-    pendingPlaceRef.current = place;
-    setDrawerOpen(false);
-
-    requestAnimationFrame(() => {
-      setAddToVenturrOpen(true);
-    });
-  };
-
-  const handleDialogClose = (open: boolean) => {
-    if (!open && isAdding) return;
-
-    setAddToVenturrOpen(open);
-
-    if (!open) {
-      pendingPlaceRef.current = null;
-      setNewVenturrName('');
-      setIsCreatingNew(false);
-      setIsAdding(false);
+  const handleAddToCollection = async (place: PlaceWithEnrichment, collectionId: number) => {
+    if (place.venturrPlaceId == null) {
+      toast.error('Cannot add this place');
+      throw new Error('No place ID');
     }
-  };
-
-  const handleSelectCollection = async (collection: Collection) => {
-    const place = pendingPlaceRef.current;
-    if (!place || place.venturrPlaceId == null) {
-      toast.error('No place selected');
-      setAddToVenturrOpen(false);
-      return;
-    }
-    setIsAdding(true);
+    
+    setIsAddingToCollection(true);
     try {
       const result = await copyMutation.mutateAsync({ 
-        collectionId: collection.id, 
+        collectionId, 
         placeIds: [place.venturrPlaceId] 
       });
+      
       if (result.copiedCount > 0) {
-        toast.success(`Added to ${collection.title}`);
+        const collection = collections.find(c => c.id === collectionId);
+        toast.success(`Added to ${collection?.title || 'Venturr'}`);
       } else {
         toast.info('Already in that Venturr');
       }
-      pendingPlaceRef.current = null;
-      setIsAdding(false);
-      setAddToVenturrOpen(false);
-    } catch {
-      setIsAdding(false);
+      
+      return result;
+    } catch (err) {
+      toast.error('Failed to add place');
+      throw err;
+    } finally {
+      setIsAddingToCollection(false);
     }
   };
 
-  const handleCreateAndAdd = async () => {
-    if (isAdding || !newVenturrName.trim()) return;
-    const place = pendingPlaceRef.current;
-    if (!place || place.venturrPlaceId == null) {
-      toast.error('No place selected');
-      setAddToVenturrOpen(false);
-      return;
+  const handleCreateAndAdd = async (place: PlaceWithEnrichment, title: string) => {
+    if (place.venturrPlaceId == null) {
+      toast.error('Cannot add this place');
+      throw new Error('No place ID');
     }
     
-    setIsAdding(true);
+    setIsAddingToCollection(true);
     try {
-      const newCollection = await createMutation.mutateAsync(newVenturrName.trim());
+      const newCollection = await createMutation.mutateAsync(title);
       await copyMutation.mutateAsync({ 
         collectionId: newCollection.id, 
         placeIds: [place.venturrPlaceId] 
       });
       toast.success(`Added to ${newCollection.title}`);
-      pendingPlaceRef.current = null;
-      setNewVenturrName('');
-      setIsCreatingNew(false);
-      setIsAdding(false);
-      setAddToVenturrOpen(false);
-    } catch {
+    } catch (err) {
       toast.error('Failed to create Venturr');
-      setIsAdding(false);
+      throw err;
+    } finally {
+      setIsAddingToCollection(false);
     }
   };
 
@@ -178,7 +141,7 @@ export default function Explore() {
               onClick={() => setView('map')}
               className={cn(
                 "p-2 rounded-md transition-colors",
-                view === 'map' ? "bg-background shadow-sm" : "hover:bg-background/50"
+                view === 'map' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
               )}
               data-testid="button-view-map"
             >
@@ -188,7 +151,7 @@ export default function Explore() {
               onClick={() => setView('list')}
               className={cn(
                 "p-2 rounded-md transition-colors",
-                view === 'list' ? "bg-background shadow-sm" : "hover:bg-background/50"
+                view === 'list' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
               )}
               data-testid="button-view-list"
             >
@@ -197,55 +160,43 @@ export default function Explore() {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {CATEGORY_FILTERS.map(({ key, label, icon: Icon }) => (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 hide-scrollbar">
+          {CATEGORY_FILTERS.map(filter => (
             <button
-              key={label}
-              onClick={() => setCategoryFilter(categoryFilter === key ? null : key)}
+              key={filter.key || 'all'}
+              onClick={() => setCategoryFilter(filter.key)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5",
-                (categoryFilter === key || (key === null && categoryFilter === null))
-                  ? "bg-foreground text-background"
+                "px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5",
+                categoryFilter === filter.key
+                  ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
-              data-testid={`button-filter-${key || 'all'}`}
+              data-testid={`filter-${filter.key || 'all'}`}
             >
-              {Icon && <Icon className="w-4 h-4" />}
-              {label}
+              {filter.icon && <filter.icon className="w-3.5 h-3.5" />}
+              {filter.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 relative">
+      <div className="flex-1">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
-        ) : validPlaces.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8 text-center">
-            <MapPin className="w-16 h-16 text-muted-foreground/30 mb-4" />
-            <h2 className="text-xl font-bold text-foreground mb-2">No places yet</h2>
-            <p className="text-muted-foreground max-w-xs">
-              Add TikTok or Instagram links to your Venturrs and we'll extract the travel locations automatically.
-            </p>
+        ) : filteredPlaces.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground px-6 text-center">
+            <MapPin className="w-12 h-12 mb-3 opacity-30" />
+            <p className="font-medium">No places yet</p>
+            <p className="text-sm">Save some posts with locations to see them here</p>
           </div>
         ) : view === 'map' ? (
-          <div className="absolute inset-0">
-            <PlaceMap
-              places={filteredPlaces}
-              onPlaceSelect={handlePlaceSelect}
-              selectedPlaceId={selectedPlace?.id}
-              showUserPlacesOnly={true}
-            />
-
-            <div className="absolute bottom-4 left-4 right-4 bg-background/90 backdrop-blur-sm rounded-lg px-4 py-2 text-center border border-border pointer-events-none">
-              <p className="text-sm font-medium">
-                {filteredPlaces.length} {filteredPlaces.length === 1 ? 'place' : 'places'} 
-                {categoryFilter ? ' in ' + categoryFilter : ' saved'}
-              </p>
-            </div>
-          </div>
+          <PlaceMap
+            places={filteredPlaces}
+            onPlaceSelect={handlePlaceSelect}
+            selectedPlaceId={selectedPlace?.id}
+          />
         ) : (
           <div className="px-6 py-4 space-y-3">
             {filteredPlaces.length === 0 ? (
@@ -303,131 +254,11 @@ export default function Explore() {
         open={drawerOpen}
         onOpenChange={handleDrawerClose}
         showVenturrMembership={true}
-        onAddToVenturr={handleAddToVenturr}
+        collections={collections}
+        onAddToCollection={handleAddToCollection}
+        onCreateAndAdd={handleCreateAndAdd}
+        isAddingToCollection={isAddingToCollection}
       />
-
-      <Dialog open={addToVenturrOpen} onOpenChange={handleDialogClose}>
-        <DialogContent 
-          className="max-w-md rounded-[14px] shadow-sm"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          onInteractOutside={(e) => {
-            if (isAdding) e.preventDefault();
-          }}
-          onEscapeKeyDown={(e) => {
-            if (isAdding) e.preventDefault();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-heading text-lg font-semibold text-gunmetal-900">
-              Add to Venturr
-            </DialogTitle>
-            <DialogDescription className="text-gunmetal-500">
-              Choose a Venturr to add this place to
-            </DialogDescription>
-          </DialogHeader>
-
-          {isAdding ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#F25F5C]" />
-              <p className="text-sm text-gunmetal-500">Adding place...</p>
-            </div>
-          ) : (
-            <div className="space-y-3 mt-4">
-              {isCreatingNew ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newVenturrName.trim() || isAdding) return;
-                    handleCreateAndAdd();
-                  }}
-                  className="space-y-3"
-                >
-                  <div>
-                    <label htmlFor="new-venturr-name" className="sr-only">
-                      Venturr name
-                    </label>
-                    <Input
-                      id="new-venturr-name"
-                      type="text"
-                      value={newVenturrName}
-                      onChange={(e) => setNewVenturrName(e.target.value)}
-                      placeholder="New Venturr name..."
-                      className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-[#F25F5C] focus:border-[#F25F5C]"
-                      autoFocus
-                      disabled={isAdding}
-                      data-testid="input-new-venturr-name"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCreatingNew(false);
-                        setNewVenturrName('');
-                      }}
-                      disabled={isAdding}
-                      className="flex-1 h-11 rounded-[14px] border border-neutral-200 bg-white font-medium hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                      data-testid="button-cancel-create"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!newVenturrName.trim() || isAdding}
-                      className="flex-1 h-11 rounded-[14px] bg-[#F25F5C] text-white font-medium hover:bg-[#e04e4b] transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                      data-testid="button-create-and-add"
-                    >
-                      Create & Add
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setIsCreatingNew(true)}
-                    disabled={isAdding}
-                    className="w-full h-12 rounded-[14px] border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
-                    data-testid="button-create-new-venturr"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create new Venturr
-                  </button>
-
-                  {collections.length === 0 ? (
-                    <p className="text-sm text-gunmetal-500 px-1 py-4 text-center">
-                      You don't have any Venturrs yet. Create one to get started.
-                    </p>
-                  ) : (
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {collections.map((collection) => (
-                        <button
-                          key={collection.id}
-                          onPointerDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleSelectCollection(collection);
-                          }}
-                          disabled={isAdding}
-                          className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between disabled:opacity-50 disabled:pointer-events-none"
-                          data-testid={`button-select-venturr-${collection.id}`}
-                        >
-                          <span className="truncate text-gunmetal-900">{collection.title}</span>
-                          <FolderPlus className="w-4 h-4 text-gunmetal-500 flex-shrink-0" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <TabBar />
     </div>
