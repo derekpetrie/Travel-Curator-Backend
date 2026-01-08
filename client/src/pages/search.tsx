@@ -180,7 +180,7 @@ export default function Explore() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 relative min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -192,7 +192,7 @@ export default function Explore() {
             <p className="text-sm">Save some posts with locations to see them here</p>
           </div>
         ) : view === 'map' ? (
-          <div className="h-full w-full" style={{ minHeight: 'calc(100vh - 180px)' }}>
+          <div className="absolute inset-0">
             <PlaceMap
               places={filteredPlaces}
               onPlaceSelect={handlePlaceSelect}
