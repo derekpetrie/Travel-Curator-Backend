@@ -250,17 +250,22 @@ export function PlaceDrawer({
 
             {showVenturrMembership && memberVenturrs.length > 0 && (
               <div className="mt-3 pt-3 border-t border-neutral-200">
-                <p className="text-xs text-muted-foreground mb-2">Saved in:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {memberVenturrs.map(v => (
-                    <span
-                      key={v.id}
-                      className="inline-block px-2 py-1 rounded-full bg-coral-500/10 text-coral-600 text-xs font-medium"
-                      data-testid={`tag-venturr-${v.id}`}
-                    >
-                      {v.title}
-                    </span>
-                  ))}
+                <div className="flex items-baselinesear gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    Saved in:
+                  </span>
+
+                  <div className="flex flex-wrap gap-1.5 min-w-0">
+                    {memberVenturrs.map((v) => (
+                      <span
+                        key={v.id}
+                        className="inline-block px-2 py-1 rounded-full bg-coral-500/10 text-coral-600 text-xs font-medium"
+                        data-testid={`tag-venturr-${v.id}`}
+                      >
+                        {v.title}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -276,7 +281,7 @@ export function PlaceDrawer({
                 >
                   <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>
-                    You discovered this from a <span className="font-medium text-coral-500">{getSourceDisplayName(place.sourcePostSource)}</span> post
+                    You discovered here from this <span className="font-medium text-coral-500">{getSourceDisplayName(place.sourcePostSource)}</span> post
                   </span>
                 </a>
               </div>

@@ -1,6 +1,6 @@
 import { TabBar } from '@/components/TabBar';
-import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection, getPhotoUrl } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
@@ -24,13 +24,6 @@ export default function Explore() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [isAddingToCollection, setIsAddingToCollection] = useState(false);
 
-  // ✅ NEW: open the "Add" drawer by clicking the TabBar center + button programmatically
-  // This assumes your TabBar "+" button has: data-testid="tabbar-add"
-  const openAddPlace = () => {
-    const el = document.querySelector('[data-testid="tabbar-add"]') as HTMLElement | null;
-    if (el) el.click();
-  };
-
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
     queryFn: fetchAllPlaces,
@@ -49,7 +42,7 @@ export default function Explore() {
   });
 
   const copyMutation = useMutation({
-    mutationFn: ({ collectionId, placeIds }: { collectionId: number; placeIds: number[] }) =>
+    mutationFn: ({ collectionId, placeIds }: { collectionId: number; placeIds: number[] }) => 
       copyPlacesToCollection(collectionId, placeIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-places'] });
@@ -58,17 +51,17 @@ export default function Explore() {
     },
   });
 
-  const validPlaces = places.filter((p) => p.lat !== null && p.lng !== null);
+  const validPlaces = places.filter(p => p.lat !== null && p.lng !== null);
 
   const filteredPlaces = useMemo(() => {
-    return validPlaces.filter((place) => {
+    return validPlaces.filter(place => {
       return !categoryFilter || place.category === categoryFilter;
     });
   }, [validPlaces, categoryFilter]);
 
   const getCollectionName = (collectionId: number | null) => {
     if (collectionId === null) return '';
-    const collection = collections.find((c) => c.id === collectionId);
+    const collection = collections.find(c => c.id === collectionId);
     return collection?.title || '';
   };
 
@@ -92,13 +85,13 @@ export default function Explore() {
 
     setIsAddingToCollection(true);
     try {
-      const result = await copyMutation.mutateAsync({
-        collectionId,
-        placeIds: [place.venturrPlaceId],
+      const result = await copyMutation.mutateAsync({ 
+        collectionId, 
+        placeIds: [place.venturrPlaceId] 
       });
 
       if (result.copiedCount > 0) {
-        const collection = collections.find((c) => c.id === collectionId);
+        const collection = collections.find(c => c.id === collectionId);
         toast.success(`Added to ${collection?.title || 'Venturr'}`);
       } else {
         toast.info('Already in that Venturr');
@@ -122,9 +115,9 @@ export default function Explore() {
     setIsAddingToCollection(true);
     try {
       const newCollection = await createMutation.mutateAsync(title);
-      await copyMutation.mutateAsync({
-        collectionId: newCollection.id,
-        placeIds: [place.venturrPlaceId],
+      await copyMutation.mutateAsync({ 
+        collectionId: newCollection.id, 
+        placeIds: [place.venturrPlaceId] 
       });
       toast.success(`Added to ${newCollection.title}`);
     } catch (err) {
@@ -134,8 +127,6 @@ export default function Explore() {
       setIsAddingToCollection(false);
     }
   };
-
-  const showEmptyResults = !isLoading && filteredPlaces.length === 0;
 
   return (
     <div className="min-h-screen pb-24 bg-background safe-top flex flex-col">
@@ -149,8 +140,8 @@ export default function Explore() {
             <button
               onClick={() => setView('map')}
               className={cn(
-                'p-2 rounded-md transition-colors',
-                view === 'map' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+                "p-2 rounded-md transition-colors",
+                view === 'map' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
               )}
               data-testid="button-view-map"
             >
@@ -159,8 +150,8 @@ export default function Explore() {
             <button
               onClick={() => setView('list')}
               className={cn(
-                'p-2 rounded-md transition-colors',
-                view === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+                "p-2 rounded-md transition-colors",
+                view === 'list' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
               )}
               data-testid="button-view-list"
             >
@@ -170,15 +161,15 @@ export default function Explore() {
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 hide-scrollbar">
-          {CATEGORY_FILTERS.map((filter) => (
+          {CATEGORY_FILTERS.map(filter => (
             <button
               key={filter.key || 'all'}
               onClick={() => setCategoryFilter(filter.key)}
               className={cn(
-                'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
+                "px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5",
                 categoryFilter === filter.key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
               data-testid={`filter-${filter.key || 'all'}`}
             >
@@ -194,49 +185,24 @@ export default function Explore() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
+        ) : filteredPlaces.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground px-6 text-center">
+            <MapPin className="w-12 h-12 mb-3 opacity-30" />
+            <p className="font-medium">No places yet</p>
+            <p className="text-sm">Save some posts with locations to see them here</p>
+          </div>
         ) : view === 'map' ? (
           <div className="absolute inset-0">
-            {/* ✅ Map always renders, even when places=[] */}
-            <PlaceMap places={filteredPlaces} onPlaceSelect={handlePlaceSelect} selectedPlaceId={selectedPlace?.id} />
-
-            {/* ✅ Empty state becomes an overlay CTA button */}
-            {showEmptyResults && (
-              <div className="absolute inset-x-4 bottom-6 z-10">
-                <button
-                  onClick={openAddPlace}
-                  className="w-full rounded-[16px] bg-white/95 backdrop-blur border border-border shadow-sm px-4 py-3 text-left"
-                  data-testid="button-empty-add-place"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Plus className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-foreground">
-                        {places.length === 0 ? 'Add your first place' : 'No places match this filter'}
-                      </p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        Tap to add a place to a Venturr
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
+            <PlaceMap
+              places={filteredPlaces}
+              onPlaceSelect={handlePlaceSelect}
+              selectedPlaceId={selectedPlace?.id}
+            />
           </div>
         ) : (
           <div className="px-6 py-4 space-y-3">
             {filteredPlaces.length === 0 ? (
-              <button
-                onClick={openAddPlace}
-                className="w-full rounded-[16px] border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-6 text-center"
-                data-testid="button-empty-add-place-list"
-              >
-                <p className="font-semibold text-foreground">
-                  {places.length === 0 ? 'No places yet' : 'No places match your filters'}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Tap to add a place</p>
-              </button>
+              <p className="text-center text-muted-foreground py-8">No places match your filters</p>
             ) : (
               filteredPlaces.map((place) => (
                 <button
@@ -246,8 +212,8 @@ export default function Explore() {
                   data-testid={`place-card-${place.id}`}
                 >
                   {getPhotoUrl(place.photoUrl) ? (
-                    <img
-                      src={getPhotoUrl(place.photoUrl)!}
+                    <img 
+                      src={getPhotoUrl(place.photoUrl)!} 
                       alt={place.name}
                       className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                     />
@@ -296,7 +262,6 @@ export default function Explore() {
         isAddingToCollection={isAddingToCollection}
       />
 
-      {/* IMPORTANT: ensure your TabBar "+" has data-testid="tabbar-add" for openAddPlace() */}
       <TabBar />
     </div>
   );
