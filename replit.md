@@ -111,6 +111,20 @@ Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion
 - Cards are the core metaphor (white on neutral background)
 - Be transparent about AI (label AI-suggested content)
 
+### UI Component Policy (Radix-First)
+Always use Radix UI primitives (via `client/src/components/ui/` wrappers) before implementing custom solutions:
+
+1. **Check existing components first**: Look in `client/src/components/ui/` for shadcn/Radix wrappers
+2. **Extend via composition**: If a Radix component needs customization, wrap/extend it rather than forking
+3. **Document exceptions**: When Radix cannot handle a requirement, document why in a code comment
+4. **Available primitives**: ScrollArea, Dialog, Drawer, Tabs, Select, Popover, Tooltip, etc.
+
+Examples:
+- Horizontal scrolling → Use `ScrollArea` with `ScrollBar orientation="horizontal"`
+- Modal dialogs → Use `Dialog` or `Drawer` (from vaul)
+- Tab navigation → Use `Tabs` from Radix
+- Dropdowns → Use `Select` or `DropdownMenu`
+
 ## Recent Changes
 - 2026-01-08: Soft delete for Venturrs - marks deletedAt instead of hard delete, preserving posts/places
 - 2026-01-08: Discovery attribution in PlaceDrawer - links to original TikTok/Instagram post
