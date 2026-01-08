@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchPlan, generatePlan, deletePlan, updatePlan, sharePlan } from '@/lib/api';
+import { fetchPlan, generatePlan, deletePlan, updatePlan, sharePlan, getPhotoUrl } from '@/lib/api';
 import type { PlaceWithEnrichment, PlanContent } from '@shared/schema';
 import { Sparkles, Loader2, AlertCircle, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, RefreshCw, Trash2, Pencil, Check, X, Share2, Link, Copy, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -540,8 +540,8 @@ function DayCard({ day, dayIndex, placesMap, isEditing, onUpdateDayTitle, onUpda
                 if (!place) return null;
                 return (
                   <div key={placeId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 group" data-testid={`plan-place-${placeId}`}>
-                    {place.photoUrl ? (
-                      <img src={place.photoUrl} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
+                    {getPhotoUrl(place.photoUrl) ? (
+                      <img src={getPhotoUrl(place.photoUrl)!} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
                         <MapPin className="w-4 h-4 text-muted-foreground" />

@@ -2,6 +2,7 @@ import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp }
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiRequest } from '@/lib/queryClient';
+import { getPhotoUrl } from '@/lib/api';
 import type { Place } from '@shared/schema';
 import {
   Select,
@@ -83,10 +84,10 @@ export function PlaceCard({ place, collectionId }: PlaceCardProps) {
       data-testid={`place-card-${place.id}`}
     >
       <div className="flex">
-        {place.photoUrl ? (
+        {getPhotoUrl(place.photoUrl) ? (
           <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
             <img 
-              src={place.photoUrl} 
+              src={getPhotoUrl(place.photoUrl)!} 
               alt={place.name}
               className="w-full h-full object-cover"
               data-testid={`place-photo-${place.id}`}

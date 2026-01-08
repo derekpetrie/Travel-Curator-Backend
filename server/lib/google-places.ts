@@ -83,8 +83,15 @@ function parsePriceLevel(priceLevel?: string): number | undefined {
   return map[priceLevel];
 }
 
-function buildPhotoUrl(photoName: string, maxWidth: number = 400): string {
-  return `${BASE_URL}/${photoName}/media?maxWidthPx=${maxWidth}&key=${GOOGLE_PLACES_API_KEY}`;
+export function buildPhotoUrl(photoReference: string, maxWidth: number = 400): string {
+  if (!GOOGLE_PLACES_API_KEY) {
+    throw new Error("GOOGLE_PLACES_API_KEY is not configured");
+  }
+  return `${BASE_URL}/${photoReference}/media?maxWidthPx=${maxWidth}&key=${GOOGLE_PLACES_API_KEY}`;
+}
+
+export function isGooglePhotoReference(url: string): boolean {
+  return url.startsWith('places/') && url.includes('/photos/');
 }
 
 export async function searchNearbyPlaces(
@@ -207,7 +214,7 @@ export async function findAndEnrichPlace(
 
     let photoUrl: string | undefined;
     if (details.photos && details.photos.length > 0) {
-      photoUrl = buildPhotoUrl(details.photos[0].name);
+      photoUrl = details.photos[0].name;
     }
 
     const enrichmentData: GoogleEnrichmentData = {

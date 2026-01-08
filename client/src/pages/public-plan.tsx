@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'wouter';
-import { fetchPublicPlan } from '@/lib/api';
+import { fetchPublicPlan, getPhotoUrl } from '@/lib/api';
 import type { PlanContent, PlaceWithEnrichment } from '@shared/schema';
 import { Loader2, Clock, MapPin, Sun, Sunrise, Sunset, Calendar, ArrowLeft, Share2 } from 'lucide-react';
 
@@ -163,8 +163,8 @@ function PublicDayCard({ day, placesMap }: PublicDayCardProps) {
                 if (!place) return null;
                 return (
                   <div key={placeId} className="flex items-center gap-3 p-2 rounded-lg bg-[#F8FAFC]" data-testid={`plan-place-${placeId}`}>
-                    {place.photoUrl ? (
-                      <img src={place.photoUrl} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
+                    {getPhotoUrl(place.photoUrl) ? (
+                      <img src={getPhotoUrl(place.photoUrl)!} alt={place.name} className="w-10 h-10 rounded-md object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-md bg-[#E2E8F0] flex items-center justify-center">
                         <MapPin className="w-4 h-4 text-[#6B7280]" />

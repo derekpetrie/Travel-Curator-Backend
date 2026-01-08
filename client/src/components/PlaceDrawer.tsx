@@ -3,7 +3,7 @@ import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp, 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { PlaceWithEnrichment, Collection } from '@shared/schema';
-import { fetchCollectionsForPlace } from '@/lib/api';
+import { fetchCollectionsForPlace, getPhotoUrl } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 
 function getSourceDisplayName(source: string | null | undefined): string {
@@ -124,10 +124,10 @@ export function PlaceDrawer({
             
             <div className="rounded-[14px] bg-white border border-neutral-200 shadow-sm overflow-hidden">
               <div className="flex">
-                {place.photoUrl ? (
+                {getPhotoUrl(place.photoUrl) ? (
                   <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
                     <img 
-                      src={place.photoUrl} 
+                      src={getPhotoUrl(place.photoUrl)!} 
                       alt={place.name}
                       className="w-full h-full object-cover"
                     />

@@ -12,6 +12,7 @@ import { matchOrCreateVenturrPlace } from "./lib/place-matching";
 import { enrichPlaceAsync } from "./lib/foursquare";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { calculateTravelTimeMatrix, formatDuration, TIME_BLOCK_BUDGETS } from "./duration-estimator";
+import { buildPhotoUrl, isGooglePhotoReference } from "./lib/google-places";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -43,6 +44,47 @@ export async function registerRoutes(
   
   // Register object storage routes for file uploads
   registerObjectStorageRoutes(app);
+  
+  // Photo proxy endpoint - public for performance (images don't need auth)
+  // Uses 302 redirect to avoid proxying bandwidth through our server
+  app.get("/api/photos/:encodedRef", (req, res) => {
+    try {
+      const { encodedRef } = req.params;
+      const widthParam = req.query.width;
+      
+      // Decode base64url to get the photo reference
+      const photoRef = Buffer.from(encodedRef, 'base64url').toString('utf-8');
+      
+      // Validate it's a Google Places photo reference
+      if (!isGooglePhotoReference(photoRef)) {
+        return res.status(400).json({ error: "Invalid photo reference" });
+      }
+      
+      // Clamp width to reasonable bounds (100-800px)
+      let width = 400;
+      if (widthParam) {
+        const parsed = parseInt(widthParam as string, 10);
+        if (!isNaN(parsed)) {
+          width = Math.max(100, Math.min(800, parsed));
+        }
+      }
+      
+      // Generate fresh signed URL
+      const signedUrl = buildPhotoUrl(photoRef, width);
+      
+      // Set cache headers (1 day client, 30 days CDN)
+      res.set({
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200',
+        'Surrogate-Control': 'max-age=2592000',
+      });
+      
+      // Redirect to the signed URL
+      res.redirect(302, signedUrl);
+    } catch (error) {
+      console.error("[Photo Proxy] Error:", error);
+      res.status(500).json({ error: "Failed to generate photo URL" });
+    }
+  });
   
   // Collections - protected routes
   app.get("/api/collections", isAuthenticated, async (req, res) => {

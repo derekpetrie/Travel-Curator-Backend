@@ -2,7 +2,7 @@ import { TabBar } from '@/components/TabBar';
 import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection } from '@/lib/api';
+import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection, getPhotoUrl } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
 import type { PlaceWithEnrichment } from '@shared/schema';
@@ -211,9 +211,9 @@ export default function Explore() {
                   className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-lg text-left hover:bg-muted/50 transition-colors"
                   data-testid={`place-card-${place.id}`}
                 >
-                  {place.photoUrl ? (
+                  {getPhotoUrl(place.photoUrl) ? (
                     <img 
-                      src={place.photoUrl} 
+                      src={getPhotoUrl(place.photoUrl)!} 
                       alt={place.name}
                       className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                     />

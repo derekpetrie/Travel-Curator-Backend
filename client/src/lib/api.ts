@@ -220,3 +220,25 @@ export async function copyPlacesToCollection(
   if (!response.ok) throw new Error('Failed to copy places');
   return response.json();
 }
+
+// Photo URL utilities
+// Checks if a photoUrl is a Google Places reference (not a full URL)
+function isGooglePhotoReference(url: string): boolean {
+  return url.startsWith('places/') && url.includes('/photos/');
+}
+
+// Converts a photo reference or URL to a displayable URL
+// - Google photo references are converted to proxy URLs
+// - Other URLs (Foursquare, legacy) are returned as-is
+export function getPhotoUrl(photoUrl: string | null | undefined, width: number = 400): string | null {
+  if (!photoUrl) return null;
+  
+  // If it's a Google Places reference, use the proxy endpoint
+  if (isGooglePhotoReference(photoUrl)) {
+    const encoded = btoa(photoUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `${API_BASE}/photos/${encoded}?width=${width}`;
+  }
+  
+  // Otherwise return as-is (Foursquare URLs, legacy full URLs)
+  return photoUrl;
+}
