@@ -283,6 +283,7 @@ export async function registerRoutes(
       const source = metadata.source || (isTikTok ? "tiktok" : "instagram");
       
       const postData = {
+        userId: getUserId(req),
         collectionId,
         source: source as "tiktok" | "instagram",
         url: url,
@@ -369,6 +370,7 @@ export async function registerRoutes(
         places = await Promise.all(
           extractedPlaces.map(place => 
             storage.createPlace({
+              userId: getUserId(req),
               collectionId,
               name: place.name,
               city: place.city,
@@ -434,11 +436,13 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Post not found" });
       }
       
-      // Verify the collection belongs to the user
-      const collection = await storage.getCollection(post.collectionId, userId);
-      if (!collection) {
-        return res.status(404).json({ error: "Collection not found" });
+      // Verify the post belongs to the user (via userId on post)
+      if (post.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized" });
       }
+      
+      // Check if collection still exists (optional, only for logging)
+      const collection = post.collectionId ? await storage.getCollection(post.collectionId, userId) : null;
       
       console.log(`[Re-Extract] Starting extraction for post ${postId}`);
       console.log(`[Re-Extract] Caption: ${post.caption?.substring(0, 100)}...`);
@@ -546,6 +550,9 @@ export async function registerRoutes(
         isOpenNow: vp.isOpenNow,
         priceLevel: vp.priceLevel,
         addressFull: vp.addressFull,
+        // Source post info for discovery attribution
+        sourcePostUrl: vp.sourcePostUrl,
+        sourcePostSource: vp.sourcePostSource,
       }));
       
       res.json(places);

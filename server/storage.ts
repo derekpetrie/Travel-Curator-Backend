@@ -49,7 +49,7 @@ export interface IStorage {
   getPostPlaceLinks(postId: number): Promise<PostPlaceLink[]>;
   getPostPlaceLinkWithOwnership(linkId: number, userId: string): Promise<{ link: PostPlaceLink; collectionId: number } | undefined>;
   getPlacesForCollection(collectionId: number): Promise<(VenturrPlace & { linkId: number; confidence: number | null; linkType: string })[]>;
-  getPlacesForUser(userId: string): Promise<(VenturrPlace & { collectionId: number; linkId: number })[]>;
+  getPlacesForUser(userId: string): Promise<(VenturrPlace & { collectionId: number | null; linkId: number; sourcePostUrl: string | null; sourcePostSource: string | null })[]>;
   deletePostPlaceLink(id: number): Promise<void>;
   
   // Place organization
@@ -66,16 +66,16 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Collections - now scoped by userId
+  // Collections - now scoped by userId, excludes soft-deleted
   async getCollections(userId: string): Promise<Collection[]> {
     return await db.select().from(collections)
-      .where(eq(collections.userId, userId))
+      .where(and(eq(collections.userId, userId), sql`${collections.deletedAt} IS NULL`))
       .orderBy(desc(collections.createdAt));
   }
 
   async getCollection(id: number, userId: string): Promise<Collection | undefined> {
     const result = await db.select().from(collections)
-      .where(and(eq(collections.id, id), eq(collections.userId, userId)));
+      .where(and(eq(collections.id, id), eq(collections.userId, userId), sql`${collections.deletedAt} IS NULL`));
     return result[0];
   }
 
@@ -114,7 +114,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCollection(id: number, userId: string): Promise<void> {
-    await db.delete(collections)
+    // Soft delete - set deletedAt timestamp, posts/places remain with null collectionId
+    await db.update(collections)
+      .set({ deletedAt: new Date() })
       .where(and(eq(collections.id, id), eq(collections.userId, userId)));
   }
 
@@ -174,6 +176,7 @@ export class DatabaseStorage implements IStorage {
   async getPlacesByUser(userId: string): Promise<Place[]> {
     return await db.select({
       id: places.id,
+      userId: places.userId,
       collectionId: places.collectionId,
       name: places.name,
       city: places.city,
@@ -184,8 +187,7 @@ export class DatabaseStorage implements IStorage {
       confidence: places.confidence,
       createdAt: places.createdAt,
     }).from(places)
-      .innerJoin(collections, eq(places.collectionId, collections.id))
-      .where(eq(collections.userId, userId))
+      .where(eq(places.userId, userId))
       .orderBy(desc(places.createdAt));
   }
 
@@ -303,10 +305,9 @@ export class DatabaseStorage implements IStorage {
     })
       .from(postPlaceLinks)
       .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
-      .innerJoin(collections, eq(posts.collectionId, collections.id))
-      .where(and(eq(postPlaceLinks.id, linkId), eq(collections.userId, userId)));
+      .where(and(eq(postPlaceLinks.id, linkId), eq(posts.userId, userId)));
     
-    if (result.length === 0) return undefined;
+    if (result.length === 0 || result[0].collectionId === null) return undefined;
     
     const row = result[0];
     return {
@@ -318,7 +319,7 @@ export class DatabaseStorage implements IStorage {
         linkType: row.linkType,
         createdAt: row.createdAt,
       },
-      collectionId: row.collectionId,
+      collectionId: row.collectionId as number,
     };
   }
 
@@ -372,7 +373,7 @@ export class DatabaseStorage implements IStorage {
 
   async getPlacesForUser(
     userId: string
-  ): Promise<(VenturrPlace & { collectionId: number; linkId: number })[]> {
+  ): Promise<(VenturrPlace & { collectionId: number | null; linkId: number; sourcePostUrl: string | null; sourcePostSource: string | null })[]> {
     const result = await db.select({
       id: venturrPlaces.id,
       name: venturrPlaces.name,
@@ -408,12 +409,13 @@ export class DatabaseStorage implements IStorage {
       updatedAt: venturrPlaces.updatedAt,
       collectionId: posts.collectionId,
       linkId: postPlaceLinks.id,
+      sourcePostUrl: posts.url,
+      sourcePostSource: posts.source,
     })
       .from(postPlaceLinks)
       .innerJoin(venturrPlaces, eq(postPlaceLinks.placeId, venturrPlaces.id))
       .innerJoin(posts, eq(postPlaceLinks.postId, posts.id))
-      .innerJoin(collections, eq(posts.collectionId, collections.id))
-      .where(eq(collections.userId, userId))
+      .where(eq(posts.userId, userId))
       .orderBy(desc(postPlaceLinks.createdAt));
     return result;
   }
@@ -545,6 +547,7 @@ export class DatabaseStorage implements IStorage {
       if (existingInTarget.length > 0) continue;
 
       const newPost = await db.insert(posts).values({
+        userId: userId,
         collectionId: targetCollectionId,
         url: sourceLink.url,
         source: sourceLink.source,

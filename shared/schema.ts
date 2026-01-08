@@ -12,13 +12,15 @@ export const collections = pgTable("collections", {
   coverImage: text("cover_image"),
   coverGradient: text("cover_gradient"),
   summary: text("summary"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
-  collectionId: integer("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  collectionId: integer("collection_id").references(() => collections.id, { onDelete: "set null" }),
   source: text("source").notNull(),
   url: text("url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
@@ -31,7 +33,8 @@ export const posts = pgTable("posts", {
 // Legacy places table - will be migrated to venturr_places + post_place_links
 export const places = pgTable("places", {
   id: serial("id").primaryKey(),
-  collectionId: integer("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  collectionId: integer("collection_id").references(() => collections.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   city: text("city"),
   country: text("country"),
@@ -196,6 +199,9 @@ export type PlaceWithEnrichment = Place & {
   estimatedDurationMinutes?: number | null;
   spanType?: string | null; // "single" | "multi_block" | "all_day"
   durationSource?: string | null;
+  // Source post info for discovery attribution
+  sourcePostUrl?: string | null;
+  sourcePostSource?: string | null; // "tiktok" | "instagram" | "other"
 };
 export type InsertPlace = z.infer<typeof insertPlaceSchema>;
 export type VenturrPlace = typeof venturrPlaces.$inferSelect;

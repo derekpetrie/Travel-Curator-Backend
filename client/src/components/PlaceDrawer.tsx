@@ -1,9 +1,18 @@
 import { Drawer } from 'vaul';
-import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp, FolderPlus } from 'lucide-react';
+import { MapPin, Navigation, Star, Clock, Phone, Globe, ChevronDown, ChevronUp, FolderPlus, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { PlaceWithEnrichment } from '@shared/schema';
 import { fetchCollectionsForPlace } from '@/lib/api';
+
+function getSourceDisplayName(source: string | null | undefined): string {
+  if (!source) return 'social post';
+  switch (source.toLowerCase()) {
+    case 'tiktok': return 'TikTok';
+    case 'instagram': return 'Instagram';
+    default: return 'social post';
+  }
+}
 
 interface PlaceDrawerProps {
   place: PlaceWithEnrichment | null;
@@ -192,6 +201,23 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVen
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {place.sourcePostUrl && (
+              <div className="mt-3 pt-3 border-t border-neutral-200">
+                <a
+                  href={place.sourcePostUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs text-gunmetal-600 hover:text-coral-500 transition-colors"
+                  data-testid="link-source-post"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>
+                    You discovered this from a <span className="font-medium text-coral-500">{getSourceDisplayName(place.sourcePostSource)}</span> post
+                  </span>
+                </a>
               </div>
             )}
 
