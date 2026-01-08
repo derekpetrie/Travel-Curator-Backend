@@ -10,6 +10,7 @@ import type { PlaceWithEnrichment } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+
 const CATEGORY_FILTERS = [
   { key: null, label: 'All', icon: null },
   { key: 'things to do', label: 'Things to Do', icon: Star },
