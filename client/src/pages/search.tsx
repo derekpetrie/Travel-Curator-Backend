@@ -1,10 +1,11 @@
 import { TabBar } from '@/components/TabBar';
 import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection, getPhotoUrl } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
+import { AddPostDrawer } from '@/components/AddPostDrawer';
 import type { PlaceWithEnrichment } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -23,12 +24,10 @@ export default function Explore() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [isAddingToCollection, setIsAddingToCollection] = useState(false);
+  const addPostTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // ✅ NEW: open the "Add" drawer by clicking the TabBar center + button programmatically
-  // This assumes your TabBar "+" button has: data-testid="tabbar-add"
   const openAddPlace = () => {
-    const el = document.querySelector('[data-testid="tabbar-add"]') as HTMLElement | null;
-    if (el) el.click();
+    addPostTriggerRef.current?.click();
   };
 
   const { data: places = [], isLoading } = useQuery({
@@ -295,6 +294,10 @@ export default function Explore() {
         onCreateAndAdd={handleCreateAndAdd}
         isAddingToCollection={isAddingToCollection}
       />
+
+      <AddPostDrawer>
+        <button ref={addPostTriggerRef} className="hidden" aria-hidden="true" />
+      </AddPostDrawer>
 
       <TabBar onAddClick={openAddPlace} />
     </div>
