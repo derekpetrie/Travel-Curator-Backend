@@ -140,34 +140,6 @@
     scrollbar-width: none;
   }
   
-  /* Touch-friendly scrollbar: hidden on touch, thin on desktop */
-  .touch-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .touch-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  @media (pointer: fine) {
-    .touch-scrollbar {
-      scrollbar-width: thin;
-      scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
-    }
-    .touch-scrollbar::-webkit-scrollbar {
-      display: block;
-      height: 4px;
-    }
-    .touch-scrollbar::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .touch-scrollbar::-webkit-scrollbar-thumb {
-      background: hsl(var(--muted-foreground) / 0.3);
-      border-radius: 2px;
-    }
-    .touch-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: hsl(var(--muted-foreground) / 0.5);
-    }
-  }
   
   .glass {
     @apply bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-white/20;

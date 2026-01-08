@@ -1,6 +1,6 @@
 import { TabBar } from '@/components/TabBar';
 import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus } from 'lucide-react';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection, getPhotoUrl } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
