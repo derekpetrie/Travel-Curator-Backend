@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'wouter';
-import { Home, Compass, PlusSquare, User } from 'lucide-react';
+import { Home, Compass, PlusSquare, Sparkles, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TabBarProps {
-  onAddClick: () => void;
+  onAddClick?: () => void;
 }
 
 export function TabBar({ onAddClick }: TabBarProps) {
@@ -34,16 +34,28 @@ export function TabBar({ onAddClick }: TabBarProps) {
           <span className="text-[10px] font-medium">Explore</span>
         </Link>
 
-        {/* ✅ Controlled Add button */}
-        <button
-          onClick={onAddClick}
-          className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+        {onAddClick && (
+          <button
+            onClick={onAddClick}
+            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+          >
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 text-white">
+              <PlusSquare className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-medium">Add</span>
+          </button>
+        )}
+
+        <Link
+          href="/inspo"
+          className={cn(
+            "flex flex-col items-center gap-1 transition-colors",
+            location === '/inspo' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+          )}
         >
-          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 text-white">
-            <PlusSquare className="w-5 h-5" />
-          </div>
-          <span className="text-[10px] font-medium">Add</span>
-        </button>
+          <Sparkles className="w-6 h-6" strokeWidth={location === '/inspo' ? 2.5 : 2} />
+          <span className="text-[10px] font-medium">Inspo</span>
+        </Link>
 
         <Link
           href="/profile"

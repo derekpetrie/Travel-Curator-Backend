@@ -10,6 +10,7 @@ import VenturrDetail from "@/pages/venturr-detail";
 import Profile from "@/pages/profile";
 import Search from "@/pages/search";
 import SavedPosts from "@/pages/saved-posts";
+import Inspo from "@/pages/inspo";
 import Landing from "@/pages/landing";
 
 function AuthenticatedRouter() {
@@ -17,6 +18,7 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/search" component={Search} />
+      <Route path="/inspo" component={Inspo} />
       <Route path="/profile" component={Profile} />
       <Route path="/saved" component={SavedPosts} />
       <Route path="/venturr/:id" component={VenturrDetail} />

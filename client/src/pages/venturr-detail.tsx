@@ -305,7 +305,7 @@ export default function VenturrDetail() {
         venturrName={collection?.title}
       />
 
-      <TabBar onAddClick={() => {}} />
+      <TabBar />
 
       <EditVenturrDrawer
         open={showEditDrawer}
