@@ -65,6 +65,8 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - `POST /api/collections/:id/plan/share` - Toggle plan sharing (isPublic, generates shareSlug)
 - `DELETE /api/collections/:id/plan` - Delete travel plan
 - `GET /api/plans/:slug` - Get public plan by share slug (no auth required)
+- `POST /api/collections/:id/share` - Toggle Venturr sharing (isPublic, generates shareSlug)
+- `GET /api/v/:slug` - Get public Venturr by share slug (no auth required)
 - `GET /api/places/:id/collections` - Get which Venturrs contain a specific place
 - `POST /api/collections/:id/copy-places` - Copy places (and their posts) to a collection
 
@@ -126,6 +128,9 @@ Examples:
 - Dropdowns → Use `Select` or `DropdownMenu`
 
 ## Recent Changes
+- 2026-01-08: Venturr-level sharing - isPublic and shareSlug fields on collections with /v/:slug public route
+- 2026-01-08: Share dialog in VenturrDetail with copy-to-clipboard using Radix Dialog
+- 2026-01-08: Moved sharing from plan-level to Venturr-level (removed share from PlanTab)
 - 2026-01-08: Soft delete for Venturrs - marks deletedAt instead of hard delete, preserving posts/places
 - 2026-01-08: Discovery attribution in PlaceDrawer - links to original TikTok/Instagram post
 - 2026-01-08: Posts and places now owned by userId (independent of collections)

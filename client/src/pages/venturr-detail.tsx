@@ -6,12 +6,13 @@ import { PlaceMap } from '@/components/PlaceMap';
 import { PlaceDrawer } from '@/components/PlaceDrawer';
 import { EditVenturrDrawer } from '@/components/EditVenturrDrawer';
 import { PlanTab } from '@/components/PlanTab';
-import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil, CalendarDays, MapPin } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ChevronLeft, Share2, Map, Grid, List, Loader2, Sparkles, Pencil, CalendarDays, MapPin, Copy, Check, Link2, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCollection, fetchPosts, fetchPlaces, generateSummary, renameCollection, deletePost } from '@/lib/api';
+import { fetchCollection, fetchPosts, fetchPlaces, generateSummary, renameCollection, deletePost, shareCollection } from '@/lib/api';
 import type { PlaceWithEnrichment } from '@shared/schema';
 
 export default function VenturrDetail() {
@@ -20,6 +21,8 @@ export default function VenturrDetail() {
   const [activeTab, setActiveTab] = useState<'posts' | 'plan' | 'places'>('posts');
   const [placesView, setPlacesView] = useState<'list' | 'map'>('list');
   const [showEditDrawer, setShowEditDrawer] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithEnrichment | null>(null);
   const [placeDrawerOpen, setPlaceDrawerOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -70,6 +73,42 @@ export default function VenturrDetail() {
       queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
     },
   });
+
+  const shareMutation = useMutation({
+    mutationFn: (isPublic: boolean) => shareCollection(collectionId, isPublic),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
+      if (data.shareUrl) {
+        const fullUrl = `${window.location.origin}${data.shareUrl}`;
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+        }).catch(() => {});
+      }
+    },
+  });
+
+  const handleShare = () => {
+    setShowShareDialog(true);
+    if (!collection?.isPublic) {
+      shareMutation.mutate(true);
+    }
+  };
+
+  const handleUnshare = () => {
+    shareMutation.mutate(false);
+    setShowShareDialog(false);
+  };
+
+  const copyShareLink = () => {
+    if (collection?.shareSlug) {
+      const fullUrl = `${window.location.origin}/v/${collection.shareSlug}`;
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      }).catch(() => {});
+    }
+  };
 
   // Auto-generate summary if there are places but no summary
   useEffect(() => {
@@ -150,7 +189,13 @@ export default function VenturrDetail() {
                    <Pencil className="w-4 h-4" />
                  </button>
                  <button 
-                   className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors text-foreground" 
+                   onClick={handleShare}
+                   className={cn(
+                     "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
+                     collection?.isPublic 
+                       ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                       : "bg-muted hover:bg-muted/80 text-foreground"
+                   )}
                    data-testid="button-share"
                  >
                    <Share2 className="w-4 h-4" />
@@ -313,7 +358,7 @@ export default function VenturrDetail() {
         venturrName={collection?.title}
       />
 
-      <TabBar />
+      <TabBar onAddClick={() => {}} />
 
       <EditVenturrDrawer
         open={showEditDrawer}
@@ -321,6 +366,67 @@ export default function VenturrDetail() {
         venturr={collection}
         onSaveTitle={handleSaveTitle}
       />
+
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Venturr</DialogTitle>
+            <DialogDescription>
+              Anyone with the link can view this Venturr.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {shareMutation.isPending ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : collection?.isPublic && collection.shareSlug ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-3 py-2 bg-muted rounded-lg text-sm truncate font-mono">
+                  {window.location.origin}/v/{collection.shareSlug}
+                </div>
+                <button
+                  onClick={copyShareLink}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 font-medium rounded-lg transition-colors",
+                    linkCopied 
+                      ? "bg-green-100 text-green-700" 
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  )}
+                  data-testid="button-copy-share-link"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              <button
+                onClick={handleUnshare}
+                disabled={shareMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors"
+                data-testid="button-stop-sharing"
+              >
+                <X className="w-4 h-4" />
+                Stop sharing
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <Link2 className="w-6 h-6 text-muted-foreground" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
