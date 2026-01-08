@@ -30,6 +30,7 @@ export default function Explore() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const pendingPlaceRef = useRef<PlaceWithEnrichment | null>(null);
+  const openDialogTimerRef = useRef<number | null>(null);
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -89,16 +90,32 @@ export default function Explore() {
 
   const handleAddToVenturr = (place: PlaceWithEnrichment) => {
     if (place.venturrPlaceId == null) return;
+
     pendingPlaceRef.current = place;
+
+    if (openDialogTimerRef.current) {
+      window.clearTimeout(openDialogTimerRef.current);
+      openDialogTimerRef.current = null;
+    }
+
     setDrawerOpen(false);
-    setTimeout(() => {
+
+    openDialogTimerRef.current = window.setTimeout(() => {
       setAddToVenturrOpen(true);
+      openDialogTimerRef.current = null;
     }, 100);
   };
 
   const handleDialogClose = (open: boolean) => {
-    if (isAdding) return;
+    if (!open && isAdding) return;
+
+    if (!open && openDialogTimerRef.current) {
+      window.clearTimeout(openDialogTimerRef.current);
+      openDialogTimerRef.current = null;
+    }
+
     setAddToVenturrOpen(open);
+
     if (!open) {
       pendingPlaceRef.current = null;
       setNewVenturrName('');
