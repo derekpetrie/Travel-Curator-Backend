@@ -69,9 +69,10 @@ export default function Explore() {
     });
   }, [validPlaces, categoryFilter]);
 
-  const getCollectionName = (collectionId: number) => {
+  const getCollectionName = (collectionId: number | null) => {
+    if (collectionId === null) return '';
     const collection = collections.find(c => c.id === collectionId);
-    return collection?.title || 'Unknown';
+    return collection?.title || '';
   };
 
   const handlePlaceSelect = (place: PlaceWithEnrichment) => {
@@ -133,7 +134,7 @@ export default function Explore() {
   };
 
   const handleCreateAndAdd = async () => {
-    if (!newVenturrName.trim()) return;
+    if (isAdding || !newVenturrName.trim()) return;
     const place = pendingPlaceRef.current;
     if (!place || place.venturrPlaceId == null) {
       toast.error('No place selected');
@@ -328,61 +329,85 @@ export default function Explore() {
           ) : (
             <div className="space-y-3 mt-4">
               {isCreatingNew ? (
-                <div className="space-y-3">
-                  <Input
-                    type="text"
-                    value={newVenturrName}
-                    onChange={(e) => setNewVenturrName(e.target.value)}
-                    placeholder="New Venturr name..."
-                    className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-[#F25F5C] focus:border-[#F25F5C]"
-                    autoFocus
-                    data-testid="input-new-venturr-name"
-                  />
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newVenturrName.trim() || isAdding) return;
+                    handleCreateAndAdd();
+                  }}
+                  className="space-y-3"
+                >
+                  <div>
+                    <label htmlFor="new-venturr-name" className="sr-only">
+                      Venturr name
+                    </label>
+                    <Input
+                      id="new-venturr-name"
+                      type="text"
+                      value={newVenturrName}
+                      onChange={(e) => setNewVenturrName(e.target.value)}
+                      placeholder="New Venturr name..."
+                      className="h-12 px-4 rounded-[14px] border-neutral-200 focus:ring-[#F25F5C] focus:border-[#F25F5C]"
+                      autoFocus
+                      disabled={isAdding}
+                      data-testid="input-new-venturr-name"
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => {
                         setIsCreatingNew(false);
                         setNewVenturrName('');
                       }}
-                      className="flex-1 h-11 rounded-[14px] border border-neutral-200 bg-white font-medium hover:bg-neutral-50 transition-colors"
+                      disabled={isAdding}
+                      className="flex-1 h-11 rounded-[14px] border border-neutral-200 bg-white font-medium hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                       data-testid="button-cancel-create"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={handleCreateAndAdd}
-                      disabled={!newVenturrName.trim()}
-                      className="flex-1 h-11 rounded-[14px] bg-[#F25F5C] text-white font-medium hover:bg-[#e04e4b] transition-colors disabled:opacity-50"
+                      type="submit"
+                      disabled={!newVenturrName.trim() || isAdding}
+                      className="flex-1 h-11 rounded-[14px] bg-[#F25F5C] text-white font-medium hover:bg-[#e04e4b] transition-colors disabled:opacity-50 disabled:pointer-events-none"
                       data-testid="button-create-and-add"
                     >
                       Create & Add
                     </button>
                   </div>
-                </div>
+                </form>
               ) : (
                 <>
                   <button
                     onClick={() => setIsCreatingNew(true)}
-                    className="w-full h-12 rounded-[14px] border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2"
+                    disabled={isAdding}
+                    className="w-full h-12 rounded-[14px] border-2 border-dashed border-[#F25F5C]/40 text-[#F25F5C] font-medium hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                     data-testid="button-create-new-venturr"
                   >
                     <Plus className="w-5 h-5" />
                     Create new Venturr
                   </button>
 
-                  <div className="max-h-64 overflow-y-auto space-y-2">
-                    {collections.map((collection) => (
-                      <button
-                        key={collection.id}
-                        onClick={() => handleSelectCollection(collection)}
-                        className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between"
-                        data-testid={`button-select-venturr-${collection.id}`}
-                      >
-                        <span className="truncate text-gunmetal-900">{collection.title}</span>
-                        <FolderPlus className="w-4 h-4 text-gunmetal-500 flex-shrink-0" />
-                      </button>
-                    ))}
-                  </div>
+                  {collections.length === 0 ? (
+                    <p className="text-sm text-gunmetal-500 px-1 py-4 text-center">
+                      You don't have any Venturrs yet. Create one to get started.
+                    </p>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {collections.map((collection) => (
+                        <button
+                          key={collection.id}
+                          onClick={() => handleSelectCollection(collection)}
+                          disabled={isAdding}
+                          className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between disabled:opacity-50 disabled:pointer-events-none"
+                          data-testid={`button-select-venturr-${collection.id}`}
+                        >
+                          <span className="truncate text-gunmetal-900">{collection.title}</span>
+                          <FolderPlus className="w-4 h-4 text-gunmetal-500 flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>
