@@ -112,7 +112,10 @@ Quietly smart, calm, modern, intentional, trustworthy. Think: Pinterest + Notion
 - Be transparent about AI (label AI-suggested content)
 
 ## Recent Changes
-- 2026-01-06: Added multi-select places on Explore page with Add to Venturr functionality
+- 2026-01-08: Soft delete for Venturrs - marks deletedAt instead of hard delete, preserving posts/places
+- 2026-01-08: Discovery attribution in PlaceDrawer - links to original TikTok/Instagram post
+- 2026-01-08: Posts and places now owned by userId (independent of collections)
+- 2026-01-06: Removed multi-select from Explore page (single-place add flow)
 - 2026-01-06: PlaceDrawer shows which Venturrs a place belongs to
 - 2026-01-06: Added copy-places API for cross-Venturr place organization (copies posts too)
 - 2026-01-05: Added plan editing with inline block title, notes, and time of day changes
