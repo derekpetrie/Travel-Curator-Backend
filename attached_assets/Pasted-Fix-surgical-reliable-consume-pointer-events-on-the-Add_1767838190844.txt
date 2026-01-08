@@ -1,0 +1,97 @@
+Fix (surgical, reliable): consume pointer events on the Add-to-Venturr button
+
+Change the drawer button to stop pointerdown/click propagation so it can’t be accidentally triggered by a click that started on top of it.
+
+<button
+  onPointerDown={(e) => {
+    // Prevent this button from being triggered by a click that started elsewhere
+    e.preventDefault();
+    e.stopPropagation();
+  }}
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddToVenturr(place);
+  }}
+  className="mt-4 w-full py-3 rounded-[14px] bg-[#F25F5C] text-white font-semibold shadow-sm hover:bg-[#e04e4b] transition-colors flex items-center justify-center gap-2"
+  data-testid="button-add-to-venturr"
+>
+  <FolderPlus className="w-4 h-4" />
+  Add to Venturr
+</button>
+
+
+That alone often fixes the reopen.
+
+✅ Fix (even more robust): also consume events inside the Dialog
+
+You should ALSO do this in the dialog so clicks never escape the dialog layer.
+
+In your dialog list item buttons:
+<button
+  key={collection.id}
+  onPointerDown={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }}
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSelectCollection(collection);
+  }}
+  ...
+>
+
+And add this to DialogContent:
+<DialogContent
+  ...
+  onPointerDown={(e) => e.stopPropagation()}
+  onClick={(e) => e.stopPropagation()}
+>
+
+
+This is belt + suspenders. In portal stacks, you usually want both.
+
+✅ Fix (best UX): don’t close the dialog until the pointer sequence is finished
+
+Even with propagation fixes, a super-safe technique is to close on the next tick so the click sequence fully completes before the dialog disappears:
+
+In success path:
+
+setIsAdding(false);
+
+// close after current event loop tick
+setTimeout(() => setAddToVenturrOpen(false), 0);
+
+
+Or:
+
+queueMicrotask(() => setAddToVenturrOpen(false));
+
+
+I’d do this only after the propagation fixes; otherwise you’re just hiding the symptom.
+
+One more thing I notice
+
+You still have a timer-based open in handleAddToVenturr in Explore (in the earlier version). Even if you’ve modified it, make sure you’ve removed any setTimeout(() => setAddToVenturrOpen(true), …). Timers amplify this bug.
+
+Use:
+
+requestAnimationFrame(() => setAddToVenturrOpen(true));
+
+
+or just open immediately after closing drawer.
+
+Minimal change set I recommend (in order)
+
+Add onPointerDown + stopPropagation to PlaceDrawer Add button ✅
+
+Add onPointerDown + stopPropagation to collection list buttons ✅
+
+Add onPointerDown stopPropagation to DialogContent ✅
+
+Remove any timer used to open the dialog ✅
+
+Do those, and the “close then reopen fast” behavior should stop completely.
+
+If you want, paste the current handleAddToVenturr from Explore (the exact one you’re running right now), and I’ll sanity-check that there isn’t still an open timer or other reopen path.
