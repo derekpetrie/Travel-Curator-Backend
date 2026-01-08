@@ -56,10 +56,6 @@ export interface IStorage {
   getCollectionsForPlace(placeId: number, userId: string): Promise<{ id: number; title: string }[]>;
   copyPlacesToCollection(placeIds: number[], targetCollectionId: number, userId: string): Promise<{ copiedCount: number }>;
   
-  // Collection sharing
-  getCollectionBySlug(slug: string): Promise<Collection | undefined>;
-  updateCollectionSharing(id: number, userId: string, isPublic: boolean, shareSlug?: string): Promise<Collection | undefined>;
-  
   // Plans
   getPlanByCollection(collectionId: number): Promise<Plan | undefined>;
   getPlanBySlug(slug: string): Promise<Plan | undefined>;
@@ -575,27 +571,6 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { copiedCount };
-  }
-
-  // Collection sharing
-  async getCollectionBySlug(slug: string): Promise<Collection | undefined> {
-    const result = await db.select().from(collections)
-      .where(and(eq(collections.shareSlug, slug), sql`${collections.deletedAt} IS NULL`))
-      .limit(1);
-    return result[0];
-  }
-
-  async updateCollectionSharing(
-    id: number,
-    userId: string,
-    isPublic: boolean,
-    shareSlug?: string
-  ): Promise<Collection | undefined> {
-    const result = await db.update(collections)
-      .set({ isPublic, shareSlug, updatedAt: new Date() })
-      .where(and(eq(collections.id, id), eq(collections.userId, userId)))
-      .returning();
-    return result[0];
   }
 }
 
