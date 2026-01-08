@@ -223,7 +223,15 @@ export function PlaceDrawer({ place, open, onOpenChange, venturrName, onAddToVen
 
             {onAddToVenturr && (
               <button
-                onClick={() => onAddToVenturr(place)}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onAddToVenturr(place);
+                }}
                 className="mt-4 w-full py-3 rounded-[14px] bg-[#F25F5C] text-white font-semibold shadow-sm hover:bg-[#e04e4b] transition-colors flex items-center justify-center gap-2"
                 data-testid="button-add-to-venturr"
               >

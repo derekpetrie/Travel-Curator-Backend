@@ -30,8 +30,6 @@ export default function Explore() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const pendingPlaceRef = useRef<PlaceWithEnrichment | null>(null);
-  const openDialogTimerRef = useRef<number | null>(null);
-  const dialogClosedAtRef = useRef<number>(0);
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -92,41 +90,20 @@ export default function Explore() {
   const handleAddToVenturr = (place: PlaceWithEnrichment) => {
     if (place.venturrPlaceId == null) return;
 
-    // Prevent reopening within 300ms of closing
-    if (Date.now() - dialogClosedAtRef.current < 300) return;
-
     pendingPlaceRef.current = place;
-
-    if (openDialogTimerRef.current) {
-      window.clearTimeout(openDialogTimerRef.current);
-      openDialogTimerRef.current = null;
-    }
-
     setDrawerOpen(false);
 
-    openDialogTimerRef.current = window.setTimeout(() => {
-      // Double-check cooldown hasn't been triggered
-      if (Date.now() - dialogClosedAtRef.current < 300) {
-        openDialogTimerRef.current = null;
-        return;
-      }
+    requestAnimationFrame(() => {
       setAddToVenturrOpen(true);
-      openDialogTimerRef.current = null;
-    }, 100);
+    });
   };
 
   const handleDialogClose = (open: boolean) => {
     if (!open && isAdding) return;
 
-    if (!open && openDialogTimerRef.current) {
-      window.clearTimeout(openDialogTimerRef.current);
-      openDialogTimerRef.current = null;
-    }
-
     setAddToVenturrOpen(open);
 
     if (!open) {
-      dialogClosedAtRef.current = Date.now();
       pendingPlaceRef.current = null;
       setNewVenturrName('');
       setIsCreatingNew(false);
@@ -332,6 +309,8 @@ export default function Explore() {
       <Dialog open={addToVenturrOpen} onOpenChange={handleDialogClose}>
         <DialogContent 
           className="max-w-md rounded-[14px] shadow-sm"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           onInteractOutside={(e) => {
             if (isAdding) e.preventDefault();
           }}
@@ -424,7 +403,15 @@ export default function Explore() {
                       {collections.map((collection) => (
                         <button
                           key={collection.id}
-                          onClick={() => handleSelectCollection(collection)}
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSelectCollection(collection);
+                          }}
                           disabled={isAdding}
                           className="w-full py-3 px-4 rounded-[14px] border border-neutral-200 bg-white text-left font-medium hover:border-[#F25F5C]/40 hover:bg-[#F25F5C]/5 transition-colors flex items-center justify-between disabled:opacity-50 disabled:pointer-events-none"
                           data-testid={`button-select-venturr-${collection.id}`}
