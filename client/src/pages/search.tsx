@@ -1,6 +1,6 @@
 import { TabBar } from '@/components/TabBar';
-import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Check, X, Plus, FolderPlus } from 'lucide-react';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { Compass, MapPin, List, Loader2, Star, UtensilsCrossed, Bed, Plus, FolderPlus } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPlaces, fetchCollections, createCollection, copyPlacesToCollection } from '@/lib/api';
 import { PlaceMap } from '@/components/PlaceMap';
@@ -25,12 +25,11 @@ export default function Explore() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   
-  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<number>>(new Set());
   const [addToVenturrOpen, setAddToVenturrOpen] = useState(false);
   const [newVenturrName, setNewVenturrName] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const pendingPlaceIdRef = useRef<number | null>(null);
+  const pendingPlaceRef = useRef<PlaceWithEnrichment | null>(null);
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -55,14 +54,10 @@ export default function Explore() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['all-places'] });
       queryClient.invalidateQueries({ queryKey: ['collections'] });
-      if (result.copiedCount > 0) {
-        toast.success(`Added ${result.copiedCount} place${result.copiedCount > 1 ? 's' : ''} to Venturr`);
-      } else {
-        toast.info('All places were already in that Venturr');
-      }
+      queryClient.invalidateQueries({ queryKey: ['place-collections'] });
     },
     onError: () => {
-      toast.error('Failed to add places');
+      toast.error('Failed to add place');
     },
   });
 
@@ -91,88 +86,79 @@ export default function Explore() {
     }
   };
 
-  const togglePlaceSelection = (placeId: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setSelectedPlaceIds(prev => {
-      const next = new Set(prev);
-      if (next.has(placeId)) {
-        next.delete(placeId);
-      } else {
-        next.add(placeId);
-      }
-      return next;
-    });
-  };
-
-  const clearSelection = () => {
-    setSelectedPlaceIds(new Set());
-  };
-
-  const handleAddToVenturr = (place?: PlaceWithEnrichment) => {
-    if (place && place.venturrPlaceId != null) {
-      pendingPlaceIdRef.current = place.venturrPlaceId;
-      setSelectedPlaceIds(new Set([place.venturrPlaceId]));
-      setDrawerOpen(false);
-      setTimeout(() => {
-        setAddToVenturrOpen(true);
-      }, 100);
-    } else if (selectedPlaceIds.size > 0) {
+  const handleAddToVenturr = (place: PlaceWithEnrichment) => {
+    if (place.venturrPlaceId == null) return;
+    pendingPlaceRef.current = place;
+    setDrawerOpen(false);
+    setTimeout(() => {
       setAddToVenturrOpen(true);
-    }
+    }, 100);
   };
 
-  useEffect(() => {
-    if (addToVenturrOpen) {
-      if (pendingPlaceIdRef.current !== null) {
-        setSelectedPlaceIds(new Set([pendingPlaceIdRef.current]));
-        pendingPlaceIdRef.current = null;
-      }
-    } else {
-      pendingPlaceIdRef.current = null;
+  const handleDialogClose = (open: boolean) => {
+    if (isAdding) return;
+    setAddToVenturrOpen(open);
+    if (!open) {
+      pendingPlaceRef.current = null;
       setNewVenturrName('');
       setIsCreatingNew(false);
       setIsAdding(false);
     }
-  }, [addToVenturrOpen]);
+  };
 
   const handleSelectCollection = async (collection: Collection) => {
-    const placeIds = Array.from(selectedPlaceIds);
-    if (placeIds.length === 0) {
-      toast.error('No places selected');
+    const place = pendingPlaceRef.current;
+    if (!place || place.venturrPlaceId == null) {
+      toast.error('No place selected');
+      setAddToVenturrOpen(false);
       return;
     }
     setIsAdding(true);
     try {
-      await copyMutation.mutateAsync({ collectionId: collection.id, placeIds });
-      toast.success(`Added to ${collection.title}`);
-      setSelectedPlaceIds(new Set());
+      const result = await copyMutation.mutateAsync({ 
+        collectionId: collection.id, 
+        placeIds: [place.venturrPlaceId] 
+      });
+      if (result.copiedCount > 0) {
+        toast.success(`Added to ${collection.title}`);
+      } else {
+        toast.info('Already in that Venturr');
+      }
+      pendingPlaceRef.current = null;
+      setIsAdding(false);
       setAddToVenturrOpen(false);
     } catch {
-      toast.error('Failed to add places');
       setIsAdding(false);
     }
   };
 
   const handleCreateAndAdd = async () => {
     if (!newVenturrName.trim()) return;
+    const place = pendingPlaceRef.current;
+    if (!place || place.venturrPlaceId == null) {
+      toast.error('No place selected');
+      setAddToVenturrOpen(false);
+      return;
+    }
     
     setIsAdding(true);
     try {
       const newCollection = await createMutation.mutateAsync(newVenturrName.trim());
-      const placeIds = Array.from(selectedPlaceIds);
-      await copyMutation.mutateAsync({ collectionId: newCollection.id, placeIds });
+      await copyMutation.mutateAsync({ 
+        collectionId: newCollection.id, 
+        placeIds: [place.venturrPlaceId] 
+      });
       toast.success(`Added to ${newCollection.title}`);
-      setSelectedPlaceIds(new Set());
+      pendingPlaceRef.current = null;
+      setNewVenturrName('');
+      setIsCreatingNew(false);
+      setIsAdding(false);
       setAddToVenturrOpen(false);
     } catch {
       toast.error('Failed to create Venturr');
       setIsAdding(false);
     }
   };
-
-  const selectedPlaces = useMemo(() => {
-    return validPlaces.filter(p => selectedPlaceIds.has(p.venturrPlaceId!));
-  }, [validPlaces, selectedPlaceIds]);
 
   return (
     <div className="min-h-screen pb-24 bg-background safe-top flex flex-col">
@@ -260,97 +246,52 @@ export default function Explore() {
             {filteredPlaces.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No places match your filters</p>
             ) : (
-              filteredPlaces.map((place) => {
-                const isSelected = place.venturrPlaceId ? selectedPlaceIds.has(place.venturrPlaceId) : false;
-                return (
-                  <div
-                    key={place.id}
-                    className="flex items-center gap-3"
-                  >
-                    <button
-                      onClick={(e) => place.venturrPlaceId && togglePlaceSelection(place.venturrPlaceId, e)}
-                      className={cn(
-                        "w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
-                        isSelected 
-                          ? "bg-coral-500 border-coral-500 text-white" 
-                          : "border-neutral-300 hover:border-coral-300"
+              filteredPlaces.map((place) => (
+                <button
+                  key={place.id}
+                  onClick={() => handlePlaceSelect(place)}
+                  className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-lg text-left hover:bg-muted/50 transition-colors"
+                  data-testid={`place-card-${place.id}`}
+                >
+                  {place.photoUrl ? (
+                    <img 
+                      src={place.photoUrl} 
+                      alt={place.name}
+                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-6 h-6 text-primary" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-foreground truncate">{place.name}</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {[place.city, place.country].filter(Boolean).join(', ')}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {place.category && (
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                          {place.category}
+                        </span>
                       )}
-                      data-testid={`checkbox-place-${place.id}`}
-                    >
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
-                    </button>
-                    
-                    <button
-                      onClick={() => handlePlaceSelect(place)}
-                      className="flex-1 flex items-center gap-4 p-4 bg-card border border-border rounded-lg text-left hover:bg-muted/50 transition-colors"
-                      data-testid={`place-card-${place.id}`}
-                    >
-                      {place.photoUrl ? (
-                        <img 
-                          src={place.photoUrl} 
-                          alt={place.name}
-                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <MapPin className="w-6 h-6 text-primary" />
-                        </div>
+                      {place.rating && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          {place.rating.toFixed(1)}
+                        </span>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-foreground truncate">{place.name}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {[place.city, place.country].filter(Boolean).join(', ')}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {place.category && (
-                            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                              {place.category}
-                            </span>
-                          )}
-                          {place.rating && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-                              <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                              {place.rating.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right text-xs text-muted-foreground flex-shrink-0">
-                        {getCollectionName(place.collectionId)}
-                      </div>
-                    </button>
+                    </div>
                   </div>
-                );
-              })
+                  <div className="text-right text-xs text-muted-foreground flex-shrink-0">
+                    {getCollectionName(place.collectionId)}
+                  </div>
+                </button>
+              ))
             )}
           </div>
         )}
       </div>
-
-      {selectedPlaceIds.size > 0 && (
-        <div className="fixed bottom-20 left-4 right-4 z-20 bg-gunmetal-900 text-white rounded-xl p-3 shadow-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={clearSelection}
-              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20"
-              data-testid="button-clear-selection"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-medium">
-              {selectedPlaceIds.size} selected
-            </span>
-          </div>
-          <button
-            onClick={() => setAddToVenturrOpen(true)}
-            className="px-4 py-2 bg-coral-500 rounded-lg font-medium flex items-center gap-2 hover:bg-coral-600 transition-colors"
-            data-testid="button-add-selected-to-venturr"
-          >
-            <FolderPlus className="w-4 h-4" />
-            Add to Venturr
-          </button>
-        </div>
-      )}
 
       <PlaceDrawer
         place={selectedPlace}
@@ -360,7 +301,7 @@ export default function Explore() {
         onAddToVenturr={handleAddToVenturr}
       />
 
-      <Dialog open={addToVenturrOpen} onOpenChange={setAddToVenturrOpen}>
+      <Dialog open={addToVenturrOpen} onOpenChange={handleDialogClose}>
         <DialogContent 
           className="max-w-md rounded-[14px] shadow-sm"
           onInteractOutside={(e) => {
@@ -375,9 +316,7 @@ export default function Explore() {
               Add to Venturr
             </DialogTitle>
             <DialogDescription className="text-gunmetal-500">
-              {selectedPlaceIds.size === 1 
-                ? 'Choose a Venturr to add this place to'
-                : `Choose a Venturr to add ${selectedPlaceIds.size} places to`}
+              Choose a Venturr to add this place to
             </DialogDescription>
           </DialogHeader>
 
