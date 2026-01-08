@@ -62,11 +62,7 @@ All endpoints require authentication (except /api/login, /api/logout, /api/callb
 - `GET /api/collections/:id/plan` - Get AI-generated travel plan (with staleness detection)
 - `POST /api/collections/:id/plan/generate` - Generate or regenerate travel plan (async)
 - `PATCH /api/collections/:id/plan` - Update plan content (edit blocks, titles, notes)
-- `POST /api/collections/:id/plan/share` - Toggle plan sharing (isPublic, generates shareSlug)
 - `DELETE /api/collections/:id/plan` - Delete travel plan
-- `GET /api/plans/:slug` - Get public plan by share slug (no auth required)
-- `POST /api/collections/:id/share` - Toggle Venturr sharing (isPublic, generates shareSlug)
-- `GET /api/v/:slug` - Get public Venturr by share slug (no auth required)
 - `GET /api/places/:id/collections` - Get which Venturrs contain a specific place
 - `POST /api/collections/:id/copy-places` - Copy places (and their posts) to a collection
 
@@ -128,9 +124,7 @@ Examples:
 - Dropdowns → Use `Select` or `DropdownMenu`
 
 ## Recent Changes
-- 2026-01-08: Venturr-level sharing - isPublic and shareSlug fields on collections with /v/:slug public route
-- 2026-01-08: Share dialog in VenturrDetail with copy-to-clipboard using Radix Dialog
-- 2026-01-08: Moved sharing from plan-level to Venturr-level (removed share from PlanTab)
+- 2026-01-08: Removed all public sharing functionality (no public Venturr or plan sharing)
 - 2026-01-08: Soft delete for Venturrs - marks deletedAt instead of hard delete, preserving posts/places
 - 2026-01-08: Discovery attribution in PlaceDrawer - links to original TikTok/Instagram post
 - 2026-01-08: Posts and places now owned by userId (independent of collections)
@@ -138,8 +132,6 @@ Examples:
 - 2026-01-06: PlaceDrawer shows which Venturrs a place belongs to
 - 2026-01-06: Added copy-places API for cross-Venturr place organization (copies posts too)
 - 2026-01-05: Added plan editing with inline block title, notes, and time of day changes
-- 2026-01-05: Added plan sharing with public links (/plan/:slug) and copy-to-clipboard
-- 2026-01-05: Added public plan view page (no auth required) at /plan/:slug
 - 2026-01-05: Added Plan tab to Venturr detail with AI-generated day-by-day itineraries
 - 2026-01-05: Restructured Venturr detail tabs to Posts | Plan | Places with List/Map toggle
 - 2026-01-05: Added plan staleness detection (shows banner when places change after plan generation)

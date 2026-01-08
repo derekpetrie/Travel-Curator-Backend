@@ -169,54 +169,6 @@ export async function updatePlan(collectionId: number, content: PlanContent): Pr
   return response.json();
 }
 
-export async function sharePlan(collectionId: number, isPublic: boolean): Promise<{ plan: Plan; shareUrl: string | null }> {
-  const response = await fetch(`${API_BASE}/collections/${collectionId}/plan/share`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ isPublic }),
-  });
-  if (!response.ok) throw new Error('Failed to share plan');
-  return response.json();
-}
-
-export async function shareCollection(collectionId: number, isPublic: boolean): Promise<{ collection: Collection; shareUrl: string | null }> {
-  const response = await fetch(`${API_BASE}/collections/${collectionId}/share`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ isPublic }),
-  });
-  if (!response.ok) throw new Error('Failed to share venturr');
-  return response.json();
-}
-
-export async function fetchPublicVenturr(slug: string): Promise<{ collection: { id: number; title: string; coverImage: string | null; coverGradient: string | null; summary: string | null }; places: PlaceWithEnrichment[] }> {
-  const response = await fetch(`${API_BASE}/v/${slug}`);
-  if (!response.ok) throw new Error('Venturr not found');
-  return response.json();
-}
-
-export async function fetchPublicPlan(slug: string): Promise<{ plan: Plan; places: Place[]; collectionTitle: string }> {
-  const response = await fetch(`${API_BASE}/plans/${slug}`);
-  if (!response.ok) throw new Error('Failed to fetch plan');
-  return response.json();
-}
-
-export async function duplicatePlan(slug: string, targetCollectionId: number): Promise<Plan> {
-  const response = await fetch(`${API_BASE}/plans/${slug}/duplicate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ targetCollectionId }),
-  });
-  if (!response.ok) throw new Error('Failed to duplicate plan');
-  return response.json();
-}
-
-export async function fetchPublicPlans(): Promise<(Plan & { collectionTitle: string })[]> {
-  const response = await fetch(`${API_BASE}/plans/public`);
-  if (!response.ok) throw new Error('Failed to fetch public plans');
-  return response.json();
-}
-
 // Place organization
 export async function fetchCollectionsForPlace(placeId: number): Promise<{ id: number; title: string }[]> {
   const response = await fetch(`${API_BASE}/places/${placeId}/collections`);
