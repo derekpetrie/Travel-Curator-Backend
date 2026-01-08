@@ -169,7 +169,7 @@ export default function Explore() {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 hide-scrollbar">
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 no-scrollbar">
           {CATEGORY_FILTERS.map((filter) => (
             <button
               key={filter.key || 'all'}
@@ -213,10 +213,10 @@ export default function Explore() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground">
-                        {places.length === 0 ? 'Add your first place' : 'No places match this filter'}
+                        {places.length === 0 ? 'No places yet' : 'No places match this filter'}
                       </p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        Tap to add a place to a Venturr
+                      <p className="text-sm text-muted-foreground">
+                        Tap to add a post, we'll then add its place to the map
                       </p>
                     </div>
                   </div>
@@ -235,7 +235,7 @@ export default function Explore() {
                 <p className="font-semibold text-foreground">
                   {places.length === 0 ? 'No places yet' : 'No places match your filters'}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">Tap to add a place</p>
+                <p className="text-sm text-muted-foreground mt-1">Tap to add a post, we'll then add its place to the map</p>
               </button>
             ) : (
               filteredPlaces.map((place) => (
