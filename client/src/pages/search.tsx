@@ -31,6 +31,7 @@ export default function Explore() {
   const [isAdding, setIsAdding] = useState(false);
   const pendingPlaceRef = useRef<PlaceWithEnrichment | null>(null);
   const openDialogTimerRef = useRef<number | null>(null);
+  const dialogClosedAtRef = useRef<number>(0);
 
   const { data: places = [], isLoading } = useQuery({
     queryKey: ['all-places'],
@@ -91,6 +92,9 @@ export default function Explore() {
   const handleAddToVenturr = (place: PlaceWithEnrichment) => {
     if (place.venturrPlaceId == null) return;
 
+    // Prevent reopening within 300ms of closing
+    if (Date.now() - dialogClosedAtRef.current < 300) return;
+
     pendingPlaceRef.current = place;
 
     if (openDialogTimerRef.current) {
@@ -101,6 +105,11 @@ export default function Explore() {
     setDrawerOpen(false);
 
     openDialogTimerRef.current = window.setTimeout(() => {
+      // Double-check cooldown hasn't been triggered
+      if (Date.now() - dialogClosedAtRef.current < 300) {
+        openDialogTimerRef.current = null;
+        return;
+      }
       setAddToVenturrOpen(true);
       openDialogTimerRef.current = null;
     }, 100);
@@ -117,6 +126,7 @@ export default function Explore() {
     setAddToVenturrOpen(open);
 
     if (!open) {
+      dialogClosedAtRef.current = Date.now();
       pendingPlaceRef.current = null;
       setNewVenturrName('');
       setIsCreatingNew(false);
