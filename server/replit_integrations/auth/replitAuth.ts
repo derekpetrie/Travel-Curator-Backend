@@ -88,8 +88,3 @@ return next();
 return res.status(401).json({ message: "Unauthorized" });
 }
 };
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-};
