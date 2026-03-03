@@ -60,15 +60,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await registerRoutes(httpServer, app);
+console.log("BOOT_FINGERPRINT_AUTH0_MAR3");
+console.log(
+"ENV_CHECK",
+JSON.stringify({
+hasAuth0Domain: !!process.env.AUTH0_DOMAIN,
+hasAuth0Audience: !!process.env.AUTH0_AUDIENCE,
+hasOpenAIKey: !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+hasDatabaseUrl: !!process.env.DATABASE_URL,
+nodeEnv: process.env.NODE_ENV,
+}),
+);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
+await registerRoutes(httpServer, app);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
